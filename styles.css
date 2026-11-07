@@ -1215,4 +1215,25 @@ button { font: inherit; color: inherit; }
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
+  .shell-svg .orbit { animation: none !important; }
 }
+
+/* 전자 채우기 애니메이션 */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.shell-svg .orbit { transform-box: view-box; transform-origin: 100px 100px; animation: orbit-spin linear infinite; }
+.shell-svg .orbit--rev { animation-direction: reverse; }
+.shell-svg.is-paused .orbit { animation-play-state: paused; }
+@keyframes orbit-spin { to { transform: rotate(360deg); } }
+.shell-svg .e { opacity: 0; transform-box: fill-box; transform-origin: center; transform: scale(0); transition: opacity .25s ease, transform .3s cubic-bezier(.3, 1.6, .5, 1), fill .3s; }
+.shell-svg .e.is-on { opacity: 1; transform: scale(1); }
+.shell-svg .e.is-new { fill: #e88a4a; transform: scale(1.6); }
+.shell-svg .ring { transition: stroke .2s, stroke-width .2s; }
+.shell-svg .ring.is-active { stroke: #e88a4a; stroke-width: 2.5; }
+.eanim { margin-top: var(--sp-2); }
+.eanim__status { margin: 0 0 var(--sp-2); font-size: var(--fs-xs); color: var(--muted); line-height: 1.5; min-height: 3em; }
+.eanim__status b { color: var(--ink); }
+.eanim__btns { display: flex; gap: var(--sp-1); flex-wrap: wrap; }
+.ibtn--sm { height: 40px; min-width: 40px; font-size: var(--fs-xs); }
+.shell-list li { transition: background .2s, border-color .2s, opacity .2s; }
+.shell-list li.is-active { border-color: #e88a4a; background: #fdeee3; }
+.shell-list li.is-empty { opacity: .45; }

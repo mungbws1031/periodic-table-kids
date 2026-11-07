@@ -549,18 +549,36 @@
     return '<details class="more"><summary>' + esc(summary) + '</summary><div class="more__body">' + body + "</div></details>";
   }
 
+  /* 전자가 들어오는 순서(쌓음 원리 순서, 실제 바닥상태 개수 기준) */
+  function electronSeq(el) {
+    var seq = [], placed = [];
+    ORDER.forEach(function (o) {
+      var cnt = el.ec.conf[o] || 0, n = +o[0];
+      for (var j = 0; j < cnt; j++) {
+        placed[n - 1] = (placed[n - 1] || 0) + 1;
+        seq.push({ o: o, n: n, k: placed[n - 1] - 1 });
+      }
+    });
+    return seq;
+  }
+
   function shellSvg(el) {
     var sh = el.ec.shells, n = sh.length, cx = 100, cy = 100;
     var rMin = 26, rMax = 94, step = n > 1 ? (rMax - rMin) / (n - 1) : 0;
+    var radius = function (i) { return n > 1 ? rMin + step * i : 50; };
     var out = '<svg class="shell-svg" viewBox="0 0 200 200" role="img" aria-label="전자가 사는 층 그림: ' + sh.map(function (c, i) { return (i + 1) + "층(" + SHELLS[i] + ") " + c + "개"; }).join(", ") + '">';
-    out += '<circle cx="100" cy="100" r="16" fill="#1d2330"/><text x="100" y="104" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">' + esc(el.s) + "</text>";
     sh.forEach(function (count, i) {
-      var r = n > 1 ? rMin + step * i : 50;
-      out += '<circle cx="100" cy="100" r="' + r.toFixed(1) + '" fill="none" stroke="#c3b9a4" stroke-width="1"/>';
-      for (var k = 0; k < count; k++) {
-        var a = (k / count) * Math.PI * 2 - Math.PI / 2;
-        out += '<circle cx="' + (cx + r * Math.cos(a)).toFixed(1) + '" cy="' + (cy + r * Math.sin(a)).toFixed(1) + '" r="' + (count > 18 ? 2 : 2.8) + '" fill="#2c6288"/>';
-      }
+      out += '<circle class="ring" cx="100" cy="100" r="' + radius(i).toFixed(1) + '" fill="none" stroke="#c3b9a4" stroke-width="1"/>';
+    });
+    out += '<circle cx="100" cy="100" r="16" fill="#1d2330"/><text x="100" y="104" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">' + esc(el.s) + "</text>";
+    var groups = sh.map(function () { return ""; });
+    electronSeq(el).forEach(function (e, idx) {
+      var i = e.n - 1, r = radius(i), count = sh[i];
+      var a = (e.k / count) * Math.PI * 2 - Math.PI / 2;
+      groups[i] += '<circle class="e is-on" data-i="' + idx + '" cx="' + (cx + r * Math.cos(a)).toFixed(1) + '" cy="' + (cy + r * Math.sin(a)).toFixed(1) + '" r="' + (count > 18 ? 2 : 2.8) + '" fill="#2c6288"/>';
+    });
+    groups.forEach(function (g, i) {
+      out += '<g class="orbit' + (i % 2 ? " orbit--rev" : "") + '" style="animation-duration:' + (10 + i * 5) + 's">' + g + "</g>";
     });
     return out + "</svg>";
   }
@@ -622,10 +640,14 @@
   function elecSection(el) {
     var sh = el.ec.shells;
     var say = "전자 " + el.z + "개가 " + sh.length + "개 층에 나뉘어 살아요. 맨 바깥 층에는 " + sh[sh.length - 1] + "개가 있어요.";
-    var body = '<div class="elec-grid"><figure class="shell-fig">' + shellSvg(el) + '<figcaption>가운데가 원자핵, 파란 점 하나가 전자 하나예요.</figcaption></figure><div>' +
+    var body = '<div class="elec-grid"><figure class="shell-fig">' + shellSvg(el) + '<figcaption>가운데가 원자핵, 파란 점 하나가 전자 하나예요. 전자가 실제로 채워지는 순서대로 하나씩 들어와요.</figcaption>' +
+      '<div class="eanim"><p class="eanim__status" aria-hidden="true">전자 ' + el.z + " / " + el.z + '개</p>' +
+      '<div class="eanim__btns"><button type="button" class="ibtn ibtn--sm" data-anim="toggle">↻ 처음부터 보기</button>' +
+      '<button type="button" class="ibtn ibtn--sm" data-anim="step" aria-label="전자 한 개씩 넣기">⏭ 한 개씩</button></div>' +
+      '<p class="sr-only" aria-live="polite" data-anim-live></p></div></figure><div>' +
       '<p class="kid-say">' + esc(say) + "</p>" +
       '<p class="subhead">층마다 사는 전자 수 <small>(전자껍질)</small></p><ul class="shell-list">' +
-      sh.map(function (c, i) { return "<li><b>" + (i + 1) + "층 " + SHELLS[i] + "</b>" + c + "개</li>"; }).join("") + "</ul>" +
+      sh.map(function (c, i) { return '<li><b>' + (i + 1) + "층 " + SHELLS[i] + '</b><span data-shell-count="' + i + '">' + c + "</span>개</li>"; }).join("") + "</ul>" +
       (el.z >= 104 ? '<p class="note">104번부터는 계산으로 짐작한 배치예요.</p>' : "") +
       "</div></div>";
     var notes = [];
@@ -703,6 +725,99 @@
     return sectionWrap("comp", "짝꿍 물질", "화합물", body);
   }
 
+  /* ---------- 전자 채우기 애니메이션 ---------- */
+  var anim = null;
+  var reduceMotion = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: false };
+  function stopAnim() {
+    if (anim) { clearTimeout(anim.timer); if (anim.io) anim.io.disconnect(); }
+    anim = null;
+  }
+  function setupAnim(el) {
+    stopAnim();
+    var fig = dialogBody.querySelector(".shell-fig");
+    if (!fig || !fig.querySelector(".eanim__status")) return;
+    var seq = electronSeq(el);
+    anim = {
+      el: el, seq: seq, svg: fig.querySelector(".shell-svg"),
+      dots: fig.querySelectorAll(".e"), rings: fig.querySelectorAll(".ring"),
+      status: fig.querySelector(".eanim__status"), live: fig.querySelector("[data-anim-live]"),
+      toggle: fig.querySelector('[data-anim="toggle"]'),
+      counts: dialogBody.querySelectorAll("[data-shell-count]"), items: dialogBody.querySelectorAll(".shell-list li"),
+      shown: seq.length, running: false, timer: 0, io: null,
+      delay: Math.max(45, Math.min(550, 5000 / seq.length))
+    };
+    renderAnim(-1);
+    if (reduceMotion.matches) return; /* 움직임 줄이기 설정: 완성된 그림으로 두고 버튼으로만 재생 */
+    var a = anim;
+    var start = function () { if (anim === a) { resetAnim(); playAnim(); } };
+    if ("IntersectionObserver" in window) {
+      a.io = new IntersectionObserver(function (ents) {
+        if (ents.some(function (x) { return x.isIntersecting; })) { a.io.disconnect(); a.io = null; start(); }
+      }, { threshold: 0.4 });
+      a.io.observe(a.svg);
+    } else start();
+  }
+  function shellCounts(upto) {
+    var c = anim.el.ec.shells.map(function () { return 0; });
+    for (var i = 0; i < upto; i++) c[anim.seq[i].n - 1]++;
+    return c;
+  }
+  function renderAnim(lastIdx) {
+    var a = anim, c = shellCounts(a.shown), cur = lastIdx >= 0 ? a.seq[lastIdx] : null;
+    a.dots.forEach(function (d) {
+      var i = +d.getAttribute("data-i");
+      d.classList.toggle("is-on", i < a.shown);
+      d.classList.toggle("is-new", i === lastIdx);
+    });
+    a.rings.forEach(function (r, i) { r.classList.toggle("is-active", !!cur && cur.n - 1 === i); });
+    a.counts.forEach(function (s, i) { s.textContent = c[i]; });
+    a.items.forEach(function (li, i) { li.classList.toggle("is-active", !!cur && cur.n - 1 === i); li.classList.toggle("is-empty", c[i] === 0); });
+    var done = a.shown >= a.seq.length;
+    a.status.innerHTML = "전자 <b>" + a.shown + "</b> / " + a.seq.length + "개" +
+      (cur ? " · 방금 <b>" + cur.n + "층(" + SHELLS[cur.n - 1] + ")</b>의 " + cur.o + " 방에 들어왔어요" : "") +
+      (done && !a.running ? " · 다 채웠어요!" : "");
+    a.svg.classList.toggle("is-paused", !a.running && !done);
+    a.toggle.textContent = a.running ? "⏸ 멈추기" : done ? "↻ 처음부터 보기" : (a.shown ? "▶ 계속 보기" : "▶ 시작");
+  }
+  function resetAnim() { anim.shown = 0; renderAnim(-1); }
+  function tick() {
+    var a = anim;
+    if (!a || !a.running) return;
+    if (a.shown >= a.seq.length) { a.running = false; renderAnim(-1); announce(); return; }
+    a.shown++;
+    renderAnim(a.shown - 1);
+    a.timer = setTimeout(tick, a.delay);
+  }
+  function playAnim() {
+    var a = anim;
+    if (a.shown >= a.seq.length) a.shown = 0;
+    a.running = true;
+    renderAnim(-1);
+    a.timer = setTimeout(tick, 250);
+  }
+  function pauseAnim() { clearTimeout(anim.timer); anim.running = false; renderAnim(anim.shown - 1); announce(); }
+  function stepAnim() {
+    var a = anim;
+    clearTimeout(a.timer); a.running = false;
+    if (a.shown >= a.seq.length) a.shown = 0;
+    a.shown++;
+    renderAnim(a.shown - 1);
+    announce();
+  }
+  function announce() {
+    var a = anim, cur = a.seq[a.shown - 1];
+    if (!cur) { a.live.textContent = ""; return; }
+    a.live.textContent = a.shown >= a.seq.length ? "전자 " + a.seq.length + "개를 다 채웠어요." :
+      "전자 " + a.shown + "번째가 " + cur.n + "층 " + cur.o + " 방에 들어왔어요.";
+  }
+  function animAction(act) {
+    if (!anim) return;
+    if (anim.io) { anim.io.disconnect(); anim.io = null; }
+    if (act === "step") stepAnim();
+    else if (anim.running) pauseAnim();
+    else playAnim();
+  }
+
   function renderDetail(el) {
     var catBg = CAT[el.c].color;
     var grp = el.pos.g ? "세로 " + el.pos.g + "번째 줄 (" + el.pos.g + "족)" : (el.c === "la" ? "란타넘족 (6주기 3족 자리)" : "악티늄족 (7주기 3족 자리)");
@@ -715,6 +830,7 @@
       '<div class="dhead__nav"><button type="button" class="ibtn" data-act="prev"' + (prev ? ' aria-label="이전 원소: ' + esc(prev.n) + '"' : " disabled") + ">← " + (prev ? esc(prev.s) : "") + '</button><button type="button" class="ibtn" data-act="next"' + (next ? ' aria-label="다음 원소: ' + esc(next.n) + '"' : " disabled") + ">" + (next ? esc(next.s) : "") + ' →</button><button type="button" class="ibtn ibtn--close" data-act="close">닫기</button></div></header>' +
       usesSection(el) +
       order.map(function (m) { return sections[m]; }).join("");
+    setupAnim(el);
   }
 
   function openDetail(z, focusEl) {
@@ -868,6 +984,8 @@
 
     dialog.addEventListener("click", function (ev) {
       if (ev.target === dialog) { closeDetail(); return; }
+      var ab = ev.target.closest("[data-anim]");
+      if (ab) { animAction(ab.dataset.anim); return; }
       var b = ev.target.closest("[data-act]");
       if (!b) return;
       if (b.dataset.act === "close") closeDetail();
@@ -875,6 +993,7 @@
       else if (b.dataset.act === "next" && openZ < 118) { openDetail(openZ + 1); focusAct("next"); }
     });
     dialog.addEventListener("close", function () {
+      stopAnim();
       var t = openZ ? tiles[openZ - 1] : returnFocus;
       if (t) {
         tiles.forEach(function (x) { x.tabIndex = -1; });
