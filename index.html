@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>원소 탐험 지도 — 쉽게 보는 주기율표</title>
+<meta name="description" content="초등학생도 쉽게 읽을 수 있는 118개 원소 인터랙티브 주기율표. 성질, 전자, 쌍둥이 원자(동위원소), 짝꿍 물질(화합물)을 쉬운 말로 알려 줘요.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#table-region">주기율표로 바로 가기</a>
+
+<header class="top">
+  <div class="top__inner">
+    <div class="brand">
+      <p class="brand__eyebrow">쉽게 보는 주기율표 · 118개 원소</p>
+      <h1 class="brand__title">원소 탐험 지도</h1>
+      <p class="brand__sub">칸을 누르면 그 원소가 어디에 쓰이는지 알려 줘요.</p>
+    </div>
+    <div class="search">
+      <label class="search__label" for="search">원소 찾기</label>
+      <input id="search" class="search__input" type="search" placeholder="이름, 기호, 번호 (예: 철, Fe, 26)" autocomplete="off" aria-describedby="search-status">
+      <p id="search-status" class="search__status" aria-live="polite"></p>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <section class="explorer" aria-label="주기율표 탐험">
+    <div class="modebar">
+      <div class="tabs" role="tablist" aria-label="무엇을 볼까요?">
+        <button class="tab" role="tab" id="tab-props" aria-selected="true" aria-controls="table-region" data-mode="props">
+          <span class="tab__title">성질 <small>속성</small></span><span class="tab__hint">무게, 크기, 녹는 온도</span>
+        </button>
+        <button class="tab" role="tab" id="tab-elec" aria-selected="false" aria-controls="table-region" data-mode="elec" tabindex="-1">
+          <span class="tab__title">전자 <small>전자배치</small></span><span class="tab__hint">전자가 사는 층과 방</span>
+        </button>
+        <button class="tab" role="tab" id="tab-iso" aria-selected="false" aria-controls="table-region" data-mode="iso" tabindex="-1">
+          <span class="tab__title">쌍둥이 원자 <small>동위원소</small></span><span class="tab__hint">몸무게만 다른 쌍둥이</span>
+        </button>
+        <button class="tab" role="tab" id="tab-comp" aria-selected="false" aria-controls="table-region" data-mode="comp" tabindex="-1">
+          <span class="tab__title">짝꿍 물질 <small>화합물</small></span><span class="tab__hint">원소끼리 결합해 만든 물질</span>
+        </button>
+      </div>
+      <div class="modebar__tools">
+      <div class="propbar" id="propbar" role="group" aria-label="색으로 비교할 성질">
+        <button class="chip" data-prop="cat" aria-pressed="true">원소 가족</button>
+        <button class="chip" data-prop="m" aria-pressed="false">무게 <small>원자량</small></button>
+        <button class="chip" data-prop="en" aria-pressed="false">전자 당기는 힘 <small>전기음성도</small></button>
+        <button class="chip" data-prop="r" aria-pressed="false">크기 <small>원자 반지름</small></button>
+        <button class="chip" data-prop="mp" aria-pressed="false">녹는 온도 <small>녹는점</small></button>
+        <button class="chip" data-prop="bp" aria-pressed="false">끓는 온도 <small>끓는점</small></button>
+        <button class="chip" data-prop="d" aria-pressed="false">무겁기 <small>밀도</small></button>
+      </div>
+      <button class="guide-toggle" id="guide-toggle" type="button" aria-pressed="false" aria-controls="guide-key">
+        <span class="guide-toggle__track" aria-hidden="true"><span class="guide-toggle__dot"></span></span>
+        <span class="guide-toggle__text"><b>배치 기준 보기</b><small>표가 왜 이런 모양인지 그림으로 보여 줘요</small></span>
+      </button>
+      </div>
+    </div>
+
+    <figure class="guide-figure" id="guide-figure">
+    <figcaption class="guide-cap" id="guide-cap" hidden><b>주기율표는 왜 이런 모양일까?</b> 번호 ①~⑥을 따라 배치 기준을 읽어 보세요.</figcaption>
+    <div class="table-scroll" id="table-scroll">
+      <div class="ptable-wrap" id="ptable-wrap">
+      <div class="guide-top g-only" aria-hidden="true">
+        <div class="g-fam g-fam--left">
+          <p><b class="g-chip g-chip--1">1족</b> 바깥 전자 1개 — 물에 닿으면 세게 반응하는 금속 (맨 위 수소는 예외)</p>
+          <p><b class="g-chip g-chip--2">2족</b> 바깥 전자 2개 — 1족과 닮았지만 조금 더 얌전한 금속</p>
+        </div>
+        <p class="g-fam-title"><b>③ 세로줄 = 성격이 닮은 가족 <small>(족)</small></b>같은 세로줄은 맨 바깥 층의 전자 수가 같아요.</p>
+        <div class="g-fam g-fam--right">
+          <p><b class="g-chip g-chip--17">17족</b> 바깥 전자 7개 — 전자 1개를 잘 받아서 다른 원소와 잘 결합</p>
+          <p><b class="g-chip g-chip--18">18족</b> 바깥 전자 8개(헬륨은 2개)로 안정 — 거의 결합 안 함</p>
+        </div>
+      </div>
+      <div class="ptable" id="table-region" role="tabpanel" aria-labelledby="tab-props" tabindex="-1">
+        <!-- 족 번호 머리글 -->
+        <div class="gh gh--1" style="grid-column:2">1</div><div class="gh gh--2" style="grid-column:3">2</div>
+        <div class="gh" style="grid-column:4">3</div><div class="gh" style="grid-column:5">4</div>
+        <div class="gh" style="grid-column:6">5</div><div class="gh" style="grid-column:7">6</div>
+        <div class="gh" style="grid-column:8">7</div><div class="gh" style="grid-column:9">8</div>
+        <div class="gh" style="grid-column:10">9</div><div class="gh" style="grid-column:11">10</div>
+        <div class="gh" style="grid-column:12">11</div><div class="gh" style="grid-column:13">12</div>
+        <div class="gh" style="grid-column:14">13</div><div class="gh" style="grid-column:15">14</div>
+        <div class="gh" style="grid-column:16">15</div><div class="gh" style="grid-column:17">16</div>
+        <div class="gh gh--17" style="grid-column:18">17</div><div class="gh gh--18" style="grid-column:19">18</div>
+        <!-- 오비탈 블록 띠 -->
+        <div class="bb bb--s" style="grid-column:2 / 4">s 방<span class="g-only"> · 2칸</span></div>
+        <div class="bb bb--d" style="grid-column:4 / 14"><span class="g-only">④ </span>d 방<span class="g-only"> · 10칸 (전자 10개까지)</span> · 전이 금속</div>
+        <div class="bb bb--p" style="grid-column:14 / 20">p 방<span class="g-only"> · 6칸 (전자 6개까지)</span></div>
+        <div class="bb bb--f g-only" style="grid-row:13;grid-column:5 / 19">④ f 방 · 14칸 (전자 14개까지)</div>
+        <div class="g-only g-fside" style="grid-row:13;grid-column:19 / 21" aria-hidden="true">↑ 맨 끝 Lu·Lr은 d 방(3족)으로 보기도 해요</div>
+        <!-- ③ 대표 족 테두리, ⑤ 아래 두 줄 테두리 -->
+        <div class="g-only g-frame g-frame--1" style="grid-row:3 / 10;grid-column:2" aria-hidden="true"></div>
+        <div class="g-only g-frame g-frame--2" style="grid-row:4 / 10;grid-column:3" aria-hidden="true"></div>
+        <div class="g-only g-frame g-frame--17" style="grid-row:4 / 10;grid-column:18" aria-hidden="true"></div>
+        <div class="g-only g-frame g-frame--18" style="grid-row:3 / 10;grid-column:19" aria-hidden="true"></div>
+        <div class="g-only g-frame g-frame--la" style="grid-row:11;grid-column:5 / 20" aria-hidden="true"></div>
+        <div class="g-only g-frame g-frame--ac" style="grid-row:12;grid-column:5 / 20" aria-hidden="true"></div>
+        <!-- ① 줄 끝 → 다음 줄 -->
+        <div class="g-only g-next" style="grid-row:3;grid-column:20" aria-hidden="true"><small>다음 줄</small><b>↵ 3번</b></div>
+        <div class="g-only g-next" style="grid-row:4;grid-column:20" aria-hidden="true"><small>다음 줄</small><b>↵ 11번</b></div>
+        <div class="g-only g-next" style="grid-row:5;grid-column:20" aria-hidden="true"><small>다음 줄</small><b>↵ 19번</b></div>
+        <div class="g-only g-next" style="grid-row:6;grid-column:20" aria-hidden="true"><small>다음 줄</small><b>↵ 37번</b></div>
+        <div class="g-only g-next" style="grid-row:7;grid-column:20" aria-hidden="true"><small>다음 줄</small><b>↵ 55번</b></div>
+        <div class="g-only g-next" style="grid-row:8;grid-column:20" aria-hidden="true"><small>다음 줄</small><b>↵ 87번</b></div>
+        <div class="g-only g-next g-next--end" style="grid-row:9;grid-column:20" aria-hidden="true"><small>마지막</small><b>118번</b></div>
+        <!-- 배치 기준 보기: 빈 칸에만 놓는 설명 -->
+        <div class="g-only g-rowhead" style="grid-row:1 / 3;grid-column:1" aria-hidden="true"><b>② 가로줄</b><span>= 전자 층 수</span></div>
+        <div class="g-only g-order" style="grid-row:3;grid-column:3 / 19" aria-hidden="true">
+          <span class="g-arrow g-arrow--short"></span>
+          <p><b>① 번호 순서 (원자번호)</b> 1번 → 2번 → 3번… 번호가 1씩 커지며 오른쪽으로 가요. 가운데 빈칸은 건너뛰어요.</p>
+          <span class="g-arrow"></span>
+        </div>
+        <div class="g-only g-trend" style="grid-row:4 / 6;grid-column:4 / 14" aria-hidden="true">
+          <svg class="g-trend__fig" viewBox="0 0 150 84">
+            <defs>
+              <marker id="gt-a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2c6288"/></marker>
+              <marker id="gt-a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#b5532f"/></marker>
+            </defs>
+            <rect x="3" y="3" width="144" height="78" rx="5" fill="#efe9dc" stroke="#c3b9a4"/>
+            <line x1="22" y1="56" x2="124" y2="12" stroke="#2c6288" stroke-width="3" marker-end="url(#gt-a1)"/>
+            <line x1="128" y1="30" x2="26" y2="74" stroke="#b5532f" stroke-width="3" marker-end="url(#gt-a2)"/>
+            <text x="134" y="20" font-size="13" font-weight="700" fill="#1d2330">F</text>
+            <text x="7" y="78" font-size="13" font-weight="700" fill="#1d2330">Fr</text>
+          </svg>
+          <div class="g-trend__text">
+            <p class="g-trend__title">⑥ 자리를 보면 성질이 보여요 <small>(주기적 경향성)</small></p>
+            <p class="g-trend__en"><b>↗ 오른쪽 위로</b> 갈수록 전자 당기는 힘(전기음성도)이 세져요</p>
+            <p class="g-trend__r"><b>↙ 왼쪽 아래로</b> 갈수록 원자 크기(원자 반지름)가 커져요</p>
+          </div>
+        </div>
+        <div class="g-only g-fnote" style="grid-row:10;grid-column:5 / 20" aria-hidden="true"><b>⑤ 아래로 뺀 두 줄</b> 57~71번과 89~103번은 원래 위의 점선 칸 자리에 들어가요. 그대로 넣으면 가로가 32칸이 되어 너무 넓어져서 아래로 꺼내 두었어요.</div>
+        <!-- 주기 라벨 -->
+        <div class="pl" style="grid-row:3"><b>1</b><span class="pl__k">K</span><span class="pl__floor g-only">층 1개 · K</span></div>
+        <div class="pl" style="grid-row:4"><b>2</b><span class="pl__k">L</span><span class="pl__floor g-only">층 2개 · L</span></div>
+        <div class="pl" style="grid-row:5"><b>3</b><span class="pl__k">M</span><span class="pl__floor g-only">층 3개 · M</span></div>
+        <div class="pl" style="grid-row:6"><b>4</b><span class="pl__k">N</span><span class="pl__floor g-only">층 4개 · N</span></div>
+        <div class="pl" style="grid-row:7"><b>5</b><span class="pl__k">O</span><span class="pl__floor g-only">층 5개 · O</span></div>
+        <div class="pl" style="grid-row:8"><b>6</b><span class="pl__k">P</span><span class="pl__floor g-only">층 6개 · P</span></div>
+        <div class="pl" style="grid-row:9"><b>7</b><span class="pl__k">Q</span><span class="pl__floor g-only">층 7개 · Q</span></div>
+        <div class="pl pl--series" style="grid-row:11"><b>*</b><span>f</span></div>
+        <div class="pl pl--series" style="grid-row:12"><b>**</b><span>f</span></div>
+        <div class="ph ph--la" style="grid-row:8;grid-column:4"><b>57–71</b><span>* 아래 줄</span></div>
+        <div class="ph ph--ac" style="grid-row:9;grid-column:4"><b>89–103</b><span>** 아래 줄</span></div>
+        <div class="series-tag" style="grid-row:10;grid-column:4 / 19">f 방 원소들 — 원래 * · ** 자리에 들어가지만, 표가 너무 길어지지 않게 아래로 떼어 놓았어요</div>
+
+        <!-- 미리보기 카드 (1–3주기 빈 공간) -->
+        <aside class="peek" id="peek" aria-live="polite" style="grid-row:3 / 6;grid-column:4 / 14"></aside>
+
+        <noscript><p class="noscript">원소 칸을 만들려면 JavaScript가 필요해요. 아래 설명은 그대로 읽을 수 있어요.</p></noscript>
+      </div>
+      <div class="guide-layer" id="guide-layer" aria-hidden="true"></div>
+      </div>
+    </div>
+    <p class="scroll-hint" aria-hidden="true">← 표를 손가락으로 좌우로 밀어 보세요 →</p>
+
+    <section class="guide-key" id="guide-key" aria-labelledby="guide-key-title" hidden>
+      <h2 class="guide-key__title" id="guide-key-title">배치 기준 6가지</h2>
+      <ol class="guide-key__list">
+        <li class="gk gk--1"><b>① 번호 순서 <small>(원자번호)</small></b><span>원자번호는 원자핵 속 양성자 수예요. 1번부터 118번까지 왼쪽에서 오른쪽으로 하나씩 커져요. 줄이 끝나면 오른쪽 끝 ↵ 표시를 따라 다음 줄 맨 앞에서 이어져요.</span></li>
+        <li class="gk gk--2"><b>② 가로줄 = 전자가 사는 층 수 <small>(주기)</small></b><span>전자는 아파트 층처럼 원자핵 둘레의 층(전자껍질)에 살아요. 1번째 줄 원소는 층 1개, 7번째 줄 원소는 층 7개를 써요.</span><small class="gk__more">딱 하나 예외: 5번째 줄 팔라듐(46번)은 전자가 층 4개에만 있어요.</small></li>
+        <li class="gk gk--3"><b>③ 세로줄 = 바깥 전자 수가 같은 가족 <small>(족)</small></b><span>맨 바깥 층의 전자 수가 같아서 성격이 닮았어요. 1족은 1개, 2족은 2개, 17족은 7개예요. 18족은 바깥 층이 꽉 차서(헬륨 2개, 나머지 8개) 거의 결합하지 않아요.</span></li>
+        <li class="gk gk--4"><b>④ 구역 너비 = 층 안의 방 크기 <small>(s·p·d·f 블록, 오비탈)</small></b><span>s 방은 전자 2개, p 방은 6개, d 방은 10개, f 방은 14개까지 들어가요. 그래서 구역 너비도 2칸, 6칸, 10칸, 14칸이에요.</span><small class="gk__more">헬륨은 s 방 원소지만 성질이 18족을 닮아 오른쪽 끝에 있어요. 아래 줄 맨 끝의 Lu·Lr은 3족(d 방)에 넣자는 의견도 있어요.</small></li>
+        <li class="gk gk--5"><b>⑤ 아래로 뺀 두 줄 <small>(란타넘족·악티늄족)</small></b><span>57~71번은 분홍 점선 칸, 89~103번은 보라 점선 칸 자리에 원래 들어가요. 그대로 넣으면 가로가 18칸에서 32칸으로 너무 넓어져서 아래로 꺼내 두었어요.</span></li>
+        <li class="gk gk--6"><b>⑥ 자리로 성질 짐작하기 <small>(주기적 경향성)</small></b><span>오른쪽 위로 갈수록 전자 당기는 힘(전기음성도)이 세져요(18족 빼고). 왼쪽 아래로 갈수록 원자 크기(원자 반지름)가 커져요.</span></li>
+      </ol>
+    </section>
+    </figure>
+    <p class="guide-actions" id="guide-actions" hidden><a class="guide-dl" href="periodic-table-guide.png" download>배치 기준 그림 받기 (PNG · 인쇄용)</a></p>
+
+    <div class="legend" id="legend" aria-label="색 설명"></div>
+    <p class="runtime-status" id="runtime-status" role="alert" hidden></p>
+  </section>
+
+  <section class="learn" id="learn" aria-labelledby="learn-title">
+    <header class="learn__head">
+      <p class="eyebrow">읽는 법</p>
+      <h2 id="learn-title">주기율표는 왜 이런 모양일까?</h2>
+      <p class="lead">세상의 모든 물질은 눈에 보이지 않는 아주 작은 알갱이, <strong>원자</strong>로 이루어져 있어요. 원자의 종류를 <strong>원소</strong>라고 하는데, 지금까지 118가지가 발견됐어요. 주기율표는 이 118가지 원소를 성질이 비슷한 것끼리 줄 맞춰 정리한 <strong>원소 지도</strong>예요.</p>
+
+      <div class="words">
+        <h3 class="words__title">먼저 알아 두면 좋은 낱말</h3>
+        <dl class="words__grid">
+          <div class="word"><dt>원자</dt><dd>물질을 이루는 아주 작은 알갱이. 1억 개를 한 줄로 세워도 약 0.5~5 cm밖에 안 돼요.</dd></div>
+          <div class="word"><dt>원소</dt><dd>원자의 종류. 수소, 산소, 철, 금처럼 118가지가 있어요.</dd></div>
+          <div class="word"><dt>원자핵</dt><dd>원자 한가운데에 있는 아주 작고 무거운 부분. 양성자와 중성자가 모여 있어요.</dd></div>
+          <div class="word"><dt>양성자</dt><dd>원자핵 속 알갱이. 이 개수가 원소의 이름을 정해요. 1개면 수소, 6개면 탄소!</dd></div>
+          <div class="word"><dt>중성자</dt><dd>원자핵 속에서 양성자와 함께 있는 알갱이. 개수가 달라지면 무게만 달라져요.</dd></div>
+          <div class="word"><dt>전자</dt><dd>원자핵 둘레의 층에 퍼져 사는 아주 가벼운 알갱이. 원소끼리 결합할 때 주인공이에요.</dd></div>
+        </dl>
+      </div>
+    </header>
+
+    <div class="learn__block">
+      <h3>1. 주기율표는 무엇에 쓸까?</h3>
+      <div class="cols3">
+        <div class="point">
+          <h4>📚 정리하기</h4>
+          <p>도서관 책꽂이처럼 118가지 원소마다 자기 자리(칸)가 하나씩 있어요. 번호 순서대로 놓여 있어서 찾기 쉬워요.</p>
+        </div>
+        <div class="point">
+          <h4>🔮 미리 짐작하기</h4>
+          <p>자리만 보고도 성질을 짐작할 수 있어요. 주기율표를 만든 멘델레예프는 빈칸을 남겨 두고 “여기에 이런 원소가 있을 거야”라고 예언했는데, 나중에 정말 갈륨·저마늄·스칸듐이 발견됐어요.</p>
+        </div>
+        <div class="point">
+          <h4>💡 이유 설명하기</h4>
+          <p>왜 어떤 원소는 반짝이는 금속이고 어떤 원소는 기체인지, 왜 서로 결합해 새 물질을 만드는지 원자 속 전자로 설명해 줘요. 새 배터리나 약을 만들 때도 써요.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="learn__block">
+      <h3>2. 왜 이렇게 놓았을까?</h3>
+      <p class="learn__jump"><button class="linkbtn" type="button" data-guide-open>표 위에 배치 기준 표시하기 ↑</button></p>
+      <div class="reason-grid">
+        <article class="reason">
+          <h4>번호 순서대로 — 왼쪽에서 오른쪽, 위에서 아래로</h4>
+          <p>칸 왼쪽 위의 숫자가 <b>원자번호</b>예요. 원자번호는 원자핵에 있는 <b>양성자의 개수</b>예요. 양성자가 1개면 수소, 2개면 헬륨, 6개면 탄소예요. 이 번호대로 책을 읽듯 놓아서 1번부터 118번까지 빠짐없이 이어져요.</p>
+          <details class="more">
+            <summary>더 알아보기: 왜 무게 순서가 아닐까?</summary>
+            <div class="more__body"><p>처음에는 원자의 무게(원자량) 순서로 늘어놓았어요. 1913년 모즐리가 실험으로 원자번호가 원소의 진짜 정체라는 것을 밝힌 뒤로는 원자번호 순서로 놓아요. 그래서 아르곤(39.95)이 칼륨(39.10)보다 무거워도 앞에 와요.</p></div>
+          </details>
+        </article>
+        <article class="reason">
+          <h4>가로줄(주기) = 전자가 사는 층의 수</h4>
+          <p>전자는 원자핵 둘레의 층에 나뉘어 살아요. 양파 껍질처럼 겹겹이 있어서 <b>전자껍질</b>이라고 불러요. 아파트처럼 아래층(안쪽)부터 채워져요. 1번째 가로줄 원소는 1개 층(K)만, 2번째 줄은 2개 층(L)까지 써요. 표 왼쪽의 K, L, M… 글자가 그 줄의 맨 바깥 층이에요.</p>
+          <details class="more">
+            <summary>더 알아보기: 꼭 안쪽 층부터 채워질까?</summary>
+            <div class="more__body"><p>3번째 줄까지는 그래요. 4번째 줄부터는 층 안의 방(오비탈) 에너지가 엇갈려서, 바깥 층의 s 방이 안쪽 층의 d 방보다 먼저 채워지기도 해요. 그래도 가로줄 번호가 전자가 들어 있는 가장 바깥 층의 번호라는 규칙은 그대로예요. 가로줄 끝에는 바깥 층이 안정하게 채워진 비활성 기체가 와요.</p></div>
+          </details>
+        </article>
+        <article class="reason">
+          <h4>세로줄(족) = 성격이 닮은 원소 가족</h4>
+          <p>같은 세로줄 원소들은 바깥쪽 전자의 배치가 비슷해서 성격이 닮았어요. 1족 나트륨·칼륨은 물에 닿으면 세게 반응하는 무른 금속이에요(맨 위 수소만은 금속이 아니에요). 17족 염소·아이오딘은 다른 원소와 잘 결합하고, 18족 헬륨·네온은 거의 반응하지 않는 얌전한 기체예요.</p>
+          <details class="more">
+            <summary>더 알아보기: 원자가 전자와 이온</summary>
+            <div class="more__body"><p>맨 바깥 층의 전자를 <b>원자가 전자</b>라고 해요. 1족 원소는 원자가 전자 1개를 쉽게 잃어 +1 이온이 되고, 17족 원소는 전자 1개를 얻어 −1 이온이 돼요.</p></div>
+          </details>
+        </article>
+        <article class="reason">
+          <h4>색 구역(블록) = 마지막 전자가 들어가는 방</h4>
+          <p>층 안에는 s, p, d, f라는 작은 방(<b>오비탈</b>)이 있어요. 방마다 들어갈 수 있는 전자 수가 정해져 있어요. s 방은 2개, p 방은 6개, d 방은 10개, f 방은 14개예요. 그래서 표의 구역 폭도 2칸, 6칸, 10칸, 14칸이에요. 표 모양이 곧 방의 크기예요!</p>
+          <div class="blockmap" aria-hidden="true">
+            <span class="bm bm--s">s 2칸</span><span class="bm bm--f">f 14칸</span><span class="bm bm--d">d 10칸</span><span class="bm bm--p">p 6칸</span>
+          </div>
+          <details class="more">
+            <summary>더 알아보기: 전자가 방을 채우는 순서</summary>
+            <div class="more__body"><p>전자는 에너지가 낮은 방부터 1s → 2s → 2p → 3s → 3p → 4s → 3d → 4p → 5s → 4d → 5p → 6s → 4f → 5d → 6p → 7s → 5f → 6d → 7p 순서로 채워요(쌓음 원리). 크로뮴·구리처럼 이 순서를 조금 벗어나는 예외도 있어요.</p></div>
+          </details>
+        </article>
+        <article class="reason">
+          <h4>자리를 보면 성질이 보여요 (주기적 경향성)</h4>
+          <ul class="trend-list">
+            <li><b>크기</b> 아래로 갈수록 층이 늘어나 커져요. 같은 가로줄에서는 오른쪽으로 갈수록 원자핵이 전자를 더 세게 당겨서 작아져요.</li>
+            <li><b>전자 당기는 힘(전기음성도)</b> 오른쪽 위로 갈수록 세요. 1등은 플루오린(F)이에요.</li>
+            <li><b>금속 성질</b> 왼쪽 아래로 갈수록 강해요. 붕소에서 아스타틴까지 이어지는 계단 모양 경계 근처에 금속과 비금속의 중간인 준금속이 있어요.</li>
+          </ul>
+          <svg class="trend-svg" viewBox="0 0 320 150" role="img" aria-labelledby="trend-svg-title">
+            <title id="trend-svg-title">경향성 그림: 오른쪽 위로 갈수록 전자 당기는 힘이 세지고, 왼쪽 아래로 갈수록 원자가 커지고 금속 성질이 강해져요</title>
+            <rect x="10" y="10" width="300" height="110" rx="6" style="fill:var(--surface-2);stroke:var(--line-strong)"/>
+            <defs>
+              <marker id="ah1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2c6288"/></marker>
+              <marker id="ah2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--warm)"/></marker>
+            </defs>
+            <line x1="60" y1="100" x2="270" y2="28" stroke="#2c6288" stroke-width="3" marker-end="url(#ah1)"/>
+            <text x="200" y="28" fill="#2c6288" font-size="13" text-anchor="end">전자 당기는 힘 ↑</text>
+            <line x1="250" y1="40" x2="40" y2="108" style="stroke:var(--warm)" stroke-width="3" marker-end="url(#ah2)" opacity=".85"/>
+            <text x="40" y="140" style="fill:var(--warm)" font-size="13">크기 · 금속 성질 ↑ (왼쪽 아래)</text>
+            <text x="282" y="24" font-size="13" fill="#1d2330" font-weight="700">F</text>
+            <text x="18" y="114" font-size="13" fill="#1d2330" font-weight="700">Fr</text>
+          </svg>
+        </article>
+        <article class="reason">
+          <h4>아래 두 줄을 따로 뺀 이유</h4>
+          <p>57~71번(란타넘족)과 89~103번(악티늄족), 모두 28개 원소를 원래 자리에 끼우면 표가 32칸으로 너무 길어져요. 그래서 책의 부록처럼 아래로 떼어 놓았어요. 자리만 옮겼을 뿐 번호 순서는 그대로이고, 표의 *와 ** 표시가 원래 자리예요.</p>
+          <details class="more">
+            <summary>더 알아보기: 과학자들이 아직 의논 중인 것</summary>
+            <div class="more__body"><p>3족 자리에 란타넘(La)을 둘지 루테튬(Lu)을 둘지는 지금도 의논하고 있어요. 국제순수·응용화학연맹(IUPAC)은 루테튬(Lu)과 로렌슘(Lr)을 3족에 두는 안을 검토하고 있어요.</p></div>
+          </details>
+        </article>
+      </div>
+    </div>
+
+    <div class="learn__block">
+      <h3>3. 네 가지 탭은 무엇을 알려 줄까?</h3>
+      <div class="mode-grid">
+        <article class="mode-card">
+          <p class="mode-card__tag mode-card__tag--props">성질 <small>속성</small></p>
+          <h4>원소는 어떤 모습일까?</h4>
+          <dl>
+            <dt>무엇을 보여 주나</dt><dd>무게, 크기, 녹는 온도, 끓는 온도, 무겁기(밀도), 전자 당기는 힘을 색으로 비교해요. 색이 진할수록 값이 커요.</dd>
+            <dt>어디에 쓰이나</dt><dd>전구 필라멘트는 녹는 온도가 아주 높은 텅스텐으로 만들어요. 비행기와 자전거에는 가벼운 알루미늄·마그네슘을 써요. 헬륨 풍선이 뜨는 것도 헬륨이 공기보다 가볍기 때문이에요.</dd>
+          </dl>
+          <details class="more">
+            <summary>더 알아보기</summary>
+            <div class="more__body"><p>원자량은 화학 반응에서 물질의 양을 계산할 때, 전기음성도는 결합이 어느 쪽으로 치우칠지(극성) 예측할 때 써요.</p></div>
+          </details>
+        </article>
+        <article class="mode-card">
+          <p class="mode-card__tag mode-card__tag--elec">전자 <small>전자배치</small></p>
+          <h4>성질이 생기는 진짜 이유</h4>
+          <dl>
+            <dt>무엇을 보여 주나</dt><dd>전자가 몇 개의 층에 몇 개씩 사는지 보여 줘요. 원소 칸을 누르면 원자 그림에서 층과 전자를 직접 볼 수 있어요.</dd>
+            <dt>어디에 쓰이나</dt><dd>원소가 누구와 어떻게 결합할지 짐작해요. 컴퓨터 칩(규소에 붕소나 인을 아주 조금 섞어요), 자석, 불꽃놀이와 LED의 색이 생기는 원리도 전자로 설명해요.</dd>
+          </dl>
+          <details class="more">
+            <summary>더 알아보기</summary>
+            <div class="more__body"><p>“[Ar] 3d⁶ 4s²” 같은 오비탈 표기는 어느 방에 전자가 몇 개 있는지 적은 거예요. 상세 창의 ‘더 알아보기’에서 방 칸 그림(훈트 규칙)도 볼 수 있어요.</p></div>
+          </details>
+        </article>
+        <article class="mode-card">
+          <p class="mode-card__tag mode-card__tag--iso">쌍둥이 원자 <small>동위원소</small></p>
+          <h4>같은 원소, 다른 몸무게</h4>
+          <dl>
+            <dt>무엇을 보여 주나</dt><dd>양성자 수는 같은데 중성자 수가 달라 몸무게만 다른 쌍둥이 원자를 보여 줘요. 화학 성질은 거의 같아요. 어떤 쌍둥이는 튼튼하고(안정), 어떤 쌍둥이는 시간이 지나면 스스로 부서져요(방사성).</dd>
+            <dt>어디에 쓰이나</dt><dd>탄소-14로 오래된 나무나 뼈의 나이를 알아내요. 병원 검사(테크네튬-99m), 원자력 발전(우라늄-235), 아주 정확한 원자시계(세슘-133)에도 쓰여요.</dd>
+          </dl>
+          <details class="more">
+            <summary>더 알아보기: 반감기</summary>
+            <div class="more__body"><p><b>반감기</b>는 방사성 원자의 절반이 부서져 바뀌는 데 걸리는 시간이에요. 탄소-14는 약 5,730년이라서, 남은 양을 재면 몇천 년 전 것인지 알 수 있어요.</p></div>
+          </details>
+        </article>
+        <article class="mode-card">
+          <p class="mode-card__tag mode-card__tag--comp">짝꿍 물질 <small>화합물</small></p>
+          <h4>원소끼리 결합해 만든 새 물질</h4>
+          <dl>
+            <dt>무엇을 보여 주나</dt><dd>원소들은 레고 블록처럼 서로 결합해 새 물질(<b>화합물</b>)을 만들어요. 물(H₂O)은 수소 2개와 산소 1개, 소금(NaCl)은 나트륨과 염소가 결합한 거예요. 레고와 달리 결합하면 성질이 완전히 달라져요. 나트륨은 물에서 세게 반응하고 염소는 독한 기체지만, 둘이 결합한 소금은 먹을 수 있어요.</dd>
+            <dt>어디에 쓰이나</dt><dd>화학식을 읽고, 쇠가 녹스는 이유와 배터리가 전기를 만드는 원리를 이해할 때 써요. 비료, 물감, 약의 성분을 알 때도 필요해요.</dd>
+          </dl>
+          <details class="more">
+            <summary>더 알아보기: 산화수</summary>
+            <div class="more__body"><p><b>산화수</b>는 결합할 때 전자를 몇 개 내주거나(+) 받아 오는(−) 것처럼 셈한 숫자예요. 철(+3)과 산소(−2)가 만나면 합이 0이 되도록 Fe₂O₃(녹)이 돼요.</p></div>
+          </details>
+        </article>
+      </div>
+    </div>
+
+    <footer class="sources">
+      <h3>이 숫자들은 어디서 왔나요?</h3>
+      <p>믿을 수 있는 과학 자료에서 가져왔어요. ≈ 표시는 아직 측정하지 못해 계산으로 짐작한 값이에요.</p>
+      <details class="more">
+        <summary>자료 출처 자세히 보기</summary>
+        <div class="more__body"><p>원자량은 IUPAC 표준 원자량(축약값), 전기음성도는 폴링 척도, 원자 반지름은 공유 반지름(Cordero 외, 2008), 녹는점·끓는점·밀도는 CRC Handbook 기준값, 동위원소 존재비와 반감기는 IUPAC·NUBASE2020 평가값을 따랐습니다. 대괄호 [ ] 원자량은 가장 안정한 동위원소의 질량수입니다. 104번 이후 초중원소와 일부 악티늄족의 물성은 측정되지 않은 이론 추정값입니다. 반감기가 아주 짧은 원소는 새 측정에 따라 값이 바뀔 수 있습니다. ‘몇 배’ 비교는 수소 원자(무게·크기), 물(밀도), 0 °C 공기(기체 밀도)를 기준으로 계산했습니다.</p></div>
+      </details>
+    </footer>
+  </section>
+</main>
+
+<dialog class="detail" id="detail" aria-labelledby="detail-title">
+  <div class="detail__inner" id="detail-body"></div>
+</dialog>
+
+<script src="data.js"></script>
+<script src="kids.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
