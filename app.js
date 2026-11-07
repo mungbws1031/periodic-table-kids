@@ -33,6 +33,7 @@
     props: { title: "성질 보기", text: "원소의 무게, 크기, 녹는 온도 같은 성질을 색으로 비교해요. 위 단추에서 성질을 고르면 색이 진할수록 값이 커요. 원소 칸에 마우스를 올려 보고, 눌러서 자세히 알아보세요." },
     elec: { title: "전자 보기", text: "전자는 원자핵 둘레의 층(전자껍질)에 나뉘어 살아요. 칸에는 맨 바깥 층의 전자 수가, 그 아래에는 층마다 사는 전자 수가 적혀 있어요. 색은 마지막 전자가 들어가는 방(s·p·d·f 블록)이에요." },
     iso: { title: "쌍둥이 원자 보기", text: "동위원소는 같은 원소인데 몸무게만 조금 다른 쌍둥이예요. 초록색은 부서지지 않는 튼튼한 쌍둥이가 있는 원소, 노랑~빨강은 모든 쌍둥이가 시간이 지나면 부서지는(방사성) 원소예요. 빨갈수록 빨리 부서져요." },
+    hist: { title: "고향과 발견 보기", text: "원소가 우주 어디에서 생겼는지(원소의 고향)와 사람이 언제 처음 찾아냈는지를 색으로 보여 줘요. 위 단추로 ‘어디서 생겼나’와 ‘언제 발견됐나’를 바꿔 보세요." },
     comp: { title: "짝꿍 물질 보기", text: "원소들은 레고 블록처럼 서로 결합해 새 물질(화합물)을 만들어요. 칸 아래에는 대표 화합물이 있고, 색은 결합할 때 전자를 내주는지(주황·빨강, +) 받는지(파랑, −)를 보여 줘요." }
   };
 
@@ -48,6 +49,30 @@
     { key: "day", label: "며칠~몇 달 만에 절반이 부서져요 (1일 이상)", color: "#e9805a" },
     { key: "short", label: "하루도 안 돼 절반이 부서져요 (1일 미만)", color: "#c94a3a" }
   ];
+
+  /* ---------- 원소의 고향과 발견 ---------- */
+  var ORIGIN_SRC = {
+    bb: { name: "빅뱅", short: "빅뱅", color: "#9fcff2", kid: "약 138억 년 전 우주가 처음 생기고 몇 분 동안 만들어졌어요." },
+    cr: { name: "우주를 나는 알갱이", short: "우주 알갱이", color: "#f4b3cb", kid: "아주 빠르게 우주를 날아다니는 알갱이(우주선)가 다른 원자를 부수면서 생겼어요." },
+    ls: { name: "늙어 가는 작은 별", short: "작은 별", color: "#b9e2a5", kid: "태양 같은 작은 별이 늙어 부풀 때, 원자핵이 중성자를 천천히 받아먹으며 생겼어요." },
+    ms: { name: "큰 별의 폭발", short: "큰 별 폭발", color: "#f6d77c", kid: "태양보다 훨씬 큰 별이 속에서 원소를 만들다가 마지막에 크게 폭발(초신성)하며 흩뿌렸어요." },
+    wd: { name: "백색왜성의 폭발", short: "백색왜성", color: "#c9d4de", kid: "작은 별이 죽고 남은 단단한 알맹이(백색왜성)가 옆 별의 가스를 빨아들이다 폭발하며 생겼어요." },
+    ns: { name: "중성자별 충돌", short: "중성자별", color: "#cdaef2", kid: "아주 빽빽한 죽은 별(중성자별) 두 개가 부딪칠 때 중성자가 한꺼번에 쏟아지며 생겼어요." },
+    hu: { name: "사람이 만든 것", short: "사람", color: "#eab896", kid: "자연에는 거의 없어서 원자로나 입자가속기에서 사람이 만들었어요." }
+  };
+  var ORIGIN_ORDER = ["bb", "cr", "ls", "ms", "wd", "ns", "hu"];
+  var ERAS = [
+    { max: 1599, label: "옛날 (1600년 이전)", short: "1600년 이전", color: "#efe2bf", ink: "#1d2330", kid: "누가 처음 찾았는지 몰라요" },
+    { max: 1799, label: "1600~1799년", short: "1600~1700년대", color: "#f6c98b", ink: "#1d2330", kid: "오줌 끓이기, 기체 모으기" },
+    { max: 1849, label: "1800~1849년", short: "1800년대 전반", color: "#ee9f68", ink: "#1d2330", kid: "전기로 쪼개기, 광물 분석" },
+    { max: 1899, label: "1850~1899년", short: "1800년대 후반", color: "#d77560", ink: "#1d2330", kid: "빛의 무늬, 빈칸 예언, 방사능" },
+    { max: 1939, label: "1900~1939년", short: "1900년대 초", color: "#a95f86", ink: "#ffffff", kid: "X선으로 빈칸 확인" },
+    { max: 1979, label: "1940~1979년", short: "1940~1970년대", color: "#6f5596", ink: "#ffffff", kid: "원자로, 입자가속기" },
+    { max: 9999, label: "1980년 이후", short: "1980년 이후", color: "#36457f", ink: "#ffffff", kid: "원자핵끼리 부딪치기" }
+  ];
+  function eraOf(el) { var y = el.disc.y; for (var i = 0; i < ERAS.length; i++) if (y <= ERAS[i].max) return ERAS[i]; return ERAS[ERAS.length - 1]; }
+  function fmtPct(v) { return (v < 1 ? String(v) : Math.round(v)) + "%"; }
+  function originTop(el) { return el.origin.slice().sort(function (a, b) { return b[1] - a[1]; })[0]; }
 
   /* ---------- 전자배치 계산 ---------- */
   var ORDER = ["1s", "2s", "2p", "3s", "3p", "4s", "3d", "4p", "5s", "4d", "5p", "6s", "4f", "5d", "6p", "7s", "5f", "6d", "7p"];
@@ -352,7 +377,7 @@
   }
 
   /* ---------- 상태 ---------- */
-  var state = { mode: "props", prop: "cat", query: "" };
+  var state = { mode: "props", prop: "cat", hist: "origin", query: "" };
   var EL = [];
   var tiles = [];
   var ranges = {};
@@ -426,6 +451,18 @@
         v = s.longest !== null && s.longest < 0.001 ? "1밀리초 미만" : kidDur(s.longest, s.longestStr).replace(/^약\s*/, "");
         label = "모든 쌍둥이가 방사성, 가장 오래가는 것의 반감기 " + kidDur(s.longest, s.longestStr);
       }
+    } else if (mode === "hist") {
+      if (state.hist === "origin") {
+        var top = originTop(el), src = ORIGIN_SRC[top[0]];
+        var acc = 0, stops = el.origin.map(function (o) { var a = acc; acc += o[1]; return ORIGIN_SRC[o[0]].color + " " + a + "% " + acc + "%"; }).join(",");
+        bg = el.origin.length > 1 ? "linear-gradient(90deg," + stops + ") bottom / 100% 6px no-repeat, " + src.color : src.color;
+        v = top[1] === 100 ? "100%" : fmtPct(top[1]); n = src.short;
+        label = "고향: " + el.origin.map(function (o) { return ORIGIN_SRC[o[0]].name + " " + fmtPct(o[1]); }).join(", ");
+      } else {
+        var era = eraOf(el);
+        bg = era.color; ink = era.ink; v = el.disc.label === "옛날" ? "옛날" : el.disc.label.match(/\d{4}/)[0];
+        label = "발견: " + el.disc.label + ", " + el.disc.who;
+      }
     } else {
       if (el.o1 === null) { bg = "var(--surface)"; unknown = true; v = "?"; label = "산화수 미확인"; }
       else {
@@ -494,6 +531,14 @@
         li(BLOCK_COLOR.s, "s 방", "1·2족과 헬륨 · 전자 2개까지") + li(BLOCK_COLOR.p, "p 방", "13~18족 · 전자 6개까지") +
         li(BLOCK_COLOR.d, "d 방", "3~12족 전이 금속 · 전자 10개까지") + li(BLOCK_COLOR.f, "f 방", "란타넘족·악티늄족 · 전자 14개까지") +
         '</ul><p class="legend__note">칸의 숫자: 맨 바깥 층에 사는 전자 수 · 아래 줄: 층마다 사는 전자 수 (1층 K, 2층 L …)</p>';
+    } else if (state.mode === "hist" && state.hist === "origin") {
+      h = '<p class="legend__title">원소의 고향 <small>(태양계에 있는 양 중 가장 많이 만든 곳)</small></p><ul class="legend__items legend__items--grid">' +
+        ORIGIN_ORDER.map(function (k) { return li(ORIGIN_SRC[k].color, ORIGIN_SRC[k].name, ORIGIN_SRC[k].kid); }).join("") +
+        '</ul><p class="legend__note">칸 색: 가장 많이 만든 곳 · 칸 숫자: 그 비율 · 칸 아래 얇은 띠: 여러 곳에서 나눠 만든 비율이에요. 비율은 과학자들이 짐작한 값이라 연구에 따라 조금 달라요.</p>';
+    } else if (state.mode === "hist") {
+      h = '<p class="legend__title">언제 처음 찾았을까? <small>(발견 시기)</small></p><ul class="legend__items legend__items--grid">' +
+        ERAS.map(function (e) { return li(e.color, e.label, e.kid); }).join("") +
+        '</ul><p class="legend__note">칸 숫자: 새 원소라는 걸 처음 알아본 해예요. 처음 알아챈 사람과 순수하게 얻은 사람이 다를 때가 많아서 책마다 1~2년씩 다를 수 있어요.</p>';
     } else if (state.mode === "iso") {
       h = '<p class="legend__title">쌍둥이 원자가 튼튼한가요? <small>(동위원소 안정성)</small></p><ul class="legend__items">' +
         li("linear-gradient(90deg,#e3f2dc,#2b6b35)", "튼튼한 쌍둥이가 있어요 (안정)", "진할수록 튼튼한 쌍둥이가 많아요") +
@@ -529,6 +574,9 @@
     } else if (state.mode === "iso") {
       facts = [["튼튼한 쌍둥이", s.stable ? s.stable + "종" : "없어요"], ["대표 쌍둥이", el.iso.slice(0, 2).map(function (i) { return el.s + "-" + i[0]; }).join(", ")],
         ["가장 오래가는 반감기", s.stable ? "안 부서져요" : kidDur(s.longest, s.longestStr)]];
+    } else if (state.mode === "hist") {
+      var tp = originTop(el);
+      facts = [["가장 많이 만든 곳", ORIGIN_SRC[tp[0]].name + " " + fmtPct(tp[1])], ["발견", el.disc.label], ["시대", eraOf(el).short]];
     } else {
       var c = el.cp[0].split("|");
       facts = [["대표 짝꿍 물질", c[1]], ["화학식", c[0]], ["산화수", el.o1 === null ? "모름" : fmtOx(el.o1)]];
@@ -725,6 +773,35 @@
     return sectionWrap("comp", "짝꿍 물질", "화합물", body);
   }
 
+  function histSection(el) {
+    var nm = el.n.replace(/\(.*\)/, ""), top = originTop(el), src = ORIGIN_SRC[top[0]];
+    var last = nm.charCodeAt(nm.length - 1) - 0xac00;
+    var topic = last >= 0 && last < 11172 && last % 28 === 0 ? "는" : "은";
+    var where = top[0] === "hu" ? "자연에는 거의 없어서 사람이 만들었어요" :
+      (top[1] === 100 ? "모두 " : top[1] >= 60 ? "대부분 " : "가장 많이(" + fmtPct(top[1]) + ") ") + "‘" + src.name + "’에서 생겼어요";
+    var when = el.disc.label === "옛날" ? "아주 옛날부터 사람들이 알고 썼어요" : (/쯤$/.test(el.disc.label) ? el.disc.label : el.disc.label + "년에") + " 처음 " + (el.z >= 93 || el.z === 43 || el.z === 61 || el.z === 85 ? "만들어졌어요" : "발견됐어요");
+    var say = nm + topic + " " + where + ". " + when + ".";
+    var acc = 0;
+    var bar = '<div class="obar" role="img" aria-label="' + esc(el.origin.map(function (o) { return ORIGIN_SRC[o[0]].name + " " + fmtPct(o[1]); }).join(", ")) + '">' +
+      el.origin.map(function (o) { var seg = '<span style="width:' + o[1] + "%;background:" + ORIGIN_SRC[o[0]].color + '"></span>'; acc += o[1]; return seg; }).join("") + "</div>";
+    var list = '<ul class="olist">' + el.origin.slice().sort(function (a, b) { return b[1] - a[1]; }).map(function (o) {
+      var s = ORIGIN_SRC[o[0]];
+      return '<li><span class="sw" style="background:' + s.color + '"></span><div><b>' + esc(s.name) + " <em>" + fmtPct(o[1]) + "</em></b><small>" + esc(s.kid) + "</small></div></li>";
+    }).join("") + "</ul>";
+    var earth = window.HISTORY.earth[el.z] ? '<p class="note note--earth"><b>지금 지구에서는?</b> ' + esc(window.HISTORY.earth[el.z]) + "</p>" : "";
+    var era = eraOf(el);
+    var disc = '<div class="dcard"><div class="dcard__year" style="background:' + era.color + ";color:" + era.ink + '"><b>' + esc(el.disc.label) + "</b><small>" + esc(era.short) + '</small></div>' +
+      '<div class="dcard__body"><p class="dcard__who">' + esc(el.disc.who) + '</p><p class="dcard__how">' + esc(el.disc.how) + "</p></div></div>";
+    var body = '<p class="kid-say">' + esc(say) + "</p>" +
+      '<p class="subhead">어디서 생겼나 <small>(원소의 고향 · 태양계에 있는 양 기준)</small></p>' + bar + list + earth +
+      '<p class="subhead subhead--gap">언제, 어떻게 발견됐나 <small>(발견의 역사)</small></p>' + disc +
+      more("더 알아보기: 원소가 생기는 곳과 발견의 역사", '<p class="note" style="margin-top:0">' +
+        "빅뱅 때는 수소·헬륨·리튬만 생겼어요. 탄소부터 철까지는 별 속 핵융합으로, 철보다 무거운 원소는 원자핵이 중성자를 받아먹으며 생겼어요. 중성자를 천천히 받아먹는 곳은 늙어 가는 작은 별, 한꺼번에 받아먹는 곳은 중성자별 충돌로 보고 있어요. 2017년 중성자별 충돌이 실제로 관측되면서 근거가 생겼지만, 무거운 원소를 어디서 얼마나 만드는지는 아직 연구 중이에요.</p>" +
+        '<p class="note">발견 방법은 시대마다 달랐어요. 옛날에는 자연에서 줍거나 불에 녹였고, 1700년대에는 기체를 모았고, 1800년대에는 전기로 쪼개거나 빛의 무늬로 찾았어요. 1900년대 이후에는 방사능을 따라가거나 원자로·입자가속기로 직접 만들었어요.</p>' +
+        '<p class="note">고향 비율: Jennifer A. Johnson(오하이오 주립대)의 태양계 원소 기원 자료(2017·2019). 104번 이후는 이 자료에 없어 ‘사람이 만든 것’으로 표시했어요. 발견 연도: 위키백과 ‘Timeline of chemical element discoveries’와 IUPAC 발표를 바탕으로 정리했어요.</p>');
+    return sectionWrap("hist", "고향과 발견", "원소의 역사", body);
+  }
+
   /* ---------- 전자 채우기 애니메이션 ---------- */
   var anim = null;
   var reduceMotion = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: false };
@@ -821,8 +898,8 @@
   function renderDetail(el) {
     var catBg = CAT[el.c].color;
     var grp = el.pos.g ? "세로 " + el.pos.g + "번째 줄 (" + el.pos.g + "족)" : (el.c === "la" ? "란타넘족 (6주기 3족 자리)" : "악티늄족 (7주기 3족 자리)");
-    var sections = { props: propsSection(el), elec: elecSection(el), iso: isoSection(el), comp: compSection(el) };
-    var order = [state.mode].concat(["props", "elec", "iso", "comp"].filter(function (m) { return m !== state.mode; }));
+    var sections = { props: propsSection(el), elec: elecSection(el), iso: isoSection(el), comp: compSection(el), hist: histSection(el) };
+    var order = [state.mode].concat(["props", "elec", "iso", "comp", "hist"].filter(function (m) { return m !== state.mode; }));
     var prev = el.z > 1 ? EL[el.z - 2] : null, next = el.z < 118 ? EL[el.z] : null;
     dialogBody.innerHTML =
       '<header class="dhead"><div class="dhead__badge" style="background:' + catBg + '"><span class="z">' + el.z + '</span><span class="s">' + esc(el.s) + '</span><span class="m">' + esc(el.m) + "</span></div>" +
@@ -863,12 +940,18 @@
       }
     });
     document.getElementById("propbar").hidden = mode !== "props";
+    document.getElementById("histbar").hidden = mode !== "hist";
     paint();
     peekIntro();
   }
+  function setHist(h) {
+    state.hist = h;
+    document.querySelectorAll("#histbar .chip").forEach(function (c) { c.setAttribute("aria-pressed", c.dataset.hist === h ? "true" : "false"); });
+    paint();
+  }
   function setProp(prop) {
     state.prop = prop;
-    document.querySelectorAll(".chip").forEach(function (c) { c.setAttribute("aria-pressed", c.dataset.prop === prop ? "true" : "false"); });
+    document.querySelectorAll("#propbar .chip").forEach(function (c) { c.setAttribute("aria-pressed", c.dataset.prop === prop ? "true" : "false"); });
     paint();
   }
 
@@ -906,11 +989,15 @@
   /* ---------- 초기화 ---------- */
   function init() {
     if (!window.ELEMENTS || window.ELEMENTS.length !== 118) throw new Error("원소 데이터를 불러오지 못했습니다.");
+    if (!window.HISTORY || !window.HISTORY.disc || !window.HISTORY.origin) throw new Error("원소 역사 데이터를 불러오지 못했습니다.");
     EL = window.ELEMENTS.map(function (e) {
       e.pos = position(e.z);
       e.block = blockOf(e);
       e.ec = electronInfo(e.z);
       e.isoSum = isoSummary(e);
+      var d = window.HISTORY.disc[e.z];
+      e.disc = { y: d[0] < 0 ? 0 : d[0], label: d[1], who: d[2], how: d[3] };
+      e.origin = window.HISTORY.origin[e.z];
       return e;
     });
     computeRanges();
@@ -964,6 +1051,10 @@
     document.getElementById("propbar").addEventListener("click", function (ev) {
       var c = ev.target.closest(".chip");
       if (c) setProp(c.dataset.prop);
+    });
+    document.getElementById("histbar").addEventListener("click", function (ev) {
+      var c = ev.target.closest(".chip");
+      if (c) setHist(c.dataset.hist);
     });
 
     var search = document.getElementById("search");
