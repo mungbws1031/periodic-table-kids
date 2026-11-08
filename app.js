@@ -591,7 +591,7 @@
   }
 
   /* ---------- 상세 패널 ---------- */
-  var dialog, dialogBody, openZ = null, returnFocus = null;
+  var dialog, dialogBody, openZ = null, returnFocus = null, returnOutside = null, jumpTo = null;
 
   function more(summary, body) {
     return '<details class="more"><summary>' + esc(summary) + '</summary><div class="more__body">' + body + "</div></details>";
@@ -697,7 +697,8 @@
       '<p class="subhead">층마다 사는 전자 수 <small>(전자껍질)</small></p><ul class="shell-list">' +
       sh.map(function (c, i) { return '<li><b>' + (i + 1) + "층 " + SHELLS[i] + '</b><span data-shell-count="' + i + '">' + c + "</span>개</li>"; }).join("") + "</ul>" +
       (el.z >= 104 ? '<p class="note">104번부터는 계산으로 짐작한 배치예요.</p>' : "") +
-      "</div></div>";
+      "</div></div>" +
+      '<p class="why-link"><button type="button" class="linkbtn" data-act="why-shells">🤔 왜 껍질이 여러 개일까? 쉬운 설명 보러 가기</button></p>';
     var notes = [];
     notes.push(el.block + " 블록: 마지막 전자가 " + el.block + " 방(오비탈)에 들어가요.");
     if (el.ec.exception) notes.push("규칙대로라면 다르게 채워져야 하지만, 방을 절반 또는 꽉 채우는 쪽이 더 안정해서 실제 배치가 조금 달라요(쌓음 원리의 예외).");
@@ -914,8 +915,9 @@
     var el = EL[z - 1];
     if (!el) return;
     openZ = z;
-    if (focusEl) returnFocus = focusEl;
+    if (focusEl) { returnFocus = focusEl; returnOutside = null; }
     renderDetail(el);
+    afterCloseDone = false;
     if (!dialog.open) {
       if (typeof dialog.showModal === "function") dialog.showModal(); else dialog.setAttribute("open", "");
     }
@@ -925,6 +927,31 @@
   }
   function closeDetail() {
     if (typeof dialog.close === "function") dialog.close(); else dialog.removeAttribute("open");
+    afterClose();
+  }
+  /* 창이 닫힌 뒤 할 일: 닫기 단추와 Esc(close 이벤트) 어느 쪽으로 닫혀도 한 번만 실행 */
+  var afterCloseDone = true;
+  function afterClose() {
+    if (afterCloseDone) return;
+    afterCloseDone = true;
+    stopAnim();
+    if (jumpTo) {
+      var j = jumpTo; jumpTo = null;
+      j.scrollIntoView({ block: "start" });
+      j.focus({ preventScroll: true });
+      return;
+    }
+    if (returnOutside && document.body.contains(returnOutside)) {
+      var r = returnOutside; returnOutside = null;
+      r.focus();
+      return;
+    }
+    var t = openZ ? tiles[openZ - 1] : returnFocus;
+    if (t) {
+      tiles.forEach(function (x) { x.tabIndex = -1; });
+      t.tabIndex = 0;
+      t.focus();
+    }
   }
 
   /* ---------- 모드 전환 ---------- */
@@ -1080,21 +1107,15 @@
       var b = ev.target.closest("[data-act]");
       if (!b) return;
       if (b.dataset.act === "close") closeDetail();
+      else if (b.dataset.act === "why-shells") { jumpTo = document.getElementById("shells-why"); returnOutside = null; closeDetail(); }
       else if (b.dataset.act === "prev" && openZ > 1) { openDetail(openZ - 1); focusAct("prev"); }
       else if (b.dataset.act === "next" && openZ < 118) { openDetail(openZ + 1); focusAct("next"); }
     });
-    dialog.addEventListener("close", function () {
-      stopAnim();
-      var t = openZ ? tiles[openZ - 1] : returnFocus;
-      if (t) {
-        tiles.forEach(function (x) { x.tabIndex = -1; });
-        t.tabIndex = 0;
-        t.focus();
-      }
-    });
+    dialog.addEventListener("close", afterClose);
 
     setMode("props", false);
     initGuide();
+    try { initShellsWhy(); } catch (err) { if (window.console) console.error(err); }
   }
   function focusAct(act) {
     var b = dialogBody.querySelector('[data-act="' + act + '"]');
@@ -1162,6 +1183,240 @@
     if (window.ResizeObserver) new ResizeObserver(redraw).observe(document.getElementById("ptable-wrap"));
     else window.addEventListener("resize", redraw);
     if (/[?&]guide=1/.test(location.search)) setGuide(true);
+  }
+
+  /* ---------- 읽는 법 3번: 왜 전자 껍질이 여러 개일까? ---------- */
+  var SW_JUMPS = [
+    { from: 3, to: 2, nm: 656, color: "#ff2b1c", name: "빨간 빛", say: "높이 차이가 작아서 에너지가 작은 빨간 빛이 나와요." },
+    { from: 4, to: 2, nm: 486, color: "#00b7f0", name: "청록 빛", say: "조금 더 높은 데서 뛰어내려서 청록 빛이 나와요." },
+    { from: 5, to: 2, nm: 434, color: "#4a40ff", name: "파란 빛", say: "더 높은 데서 뛰어내려서 파란 빛이 나와요." },
+    { from: 6, to: 2, nm: 410, color: "#8a2be2", name: "보라 빛", say: "가장 높은 데서 뛰어내려서 에너지가 큰 보라 빛이 나와요." },
+    { from: 2, to: 1, nm: 122, color: "#9a91ad", name: "보이지 않는 빛(자외선)", say: "1층까지 뛰어내리면 높이 차이가 아주 커요. 에너지가 너무 커서 눈에 보이지 않는 빛(자외선)이 나와요." }
+  ];
+  var SW_LEVEL_Y = [0, 192, 114, 74, 52, 37, 23]; /* 층 번호 → 그림 높이 (보기 쉽게 조절한 간격) */
+  var swMotion = function () { return !reduceMotion.matches; };
+
+  function specPos(nm) { return ((nm - 380) / 320 * 100).toFixed(1) + "%"; }
+  function wavePath(x0, y, len, amp, wl) {
+    var d = "M" + x0 + " " + y, x = x0, up = true;
+    while (x + wl / 2 <= x0 + len) { d += " q" + (wl / 4) + " " + (up ? -amp : amp) + " " + (wl / 2) + " 0"; x += wl / 2; up = !up; }
+    return d;
+  }
+
+  function initJumpLab() {
+    var box = document.getElementById("sw-jump");
+    if (!box) return;
+    var svg = '<svg class="sw-levels" viewBox="0 0 300 206" role="img" aria-label="수소 원자의 전자 층 계단 그림. 1층부터 6층까지 있고, 위로 갈수록 층 사이가 좁아져요.">';
+    for (var n = 1; n <= 6; n++) {
+      svg += '<line class="sw-level" data-level="' + n + '" x1="48" x2="292" y1="' + SW_LEVEL_Y[n] + '" y2="' + SW_LEVEL_Y[n] + '"/>' +
+        '<text class="sw-level-t" x="42" y="' + (SW_LEVEL_Y[n] + 4) + '" text-anchor="end">' + n + "층</text>";
+    }
+    svg += '<line class="sw-drop" x1="120" x2="120" y1="0" y2="0"/>' +
+      '<path class="sw-photon" d="" fill="none" stroke-width="3" stroke-linecap="round"/>' +
+      '<text class="sw-photon-t" x="290" y="0" text-anchor="end"></text>' +
+      '<g class="sw-electron" transform="translate(120 ' + SW_LEVEL_Y[2] + ')"><circle r="8"/><text y="4" text-anchor="middle">−</text></g></svg>';
+    var lines = SW_JUMPS.filter(function (j) { return j.nm > 380; }).map(function (j) {
+      return '<i data-nm="' + j.nm + '" style="left:' + specPos(j.nm) + ";background:" + j.color + '"></i>';
+    }).join("");
+    var wrap = document.createElement("div");
+    wrap.className = "sw-jump";
+    wrap.innerHTML = '<div class="sw-jump__fig">' + svg + "</div>" +
+      '<div class="sw-jump__side">' +
+      '<div class="sw-btns" role="group" aria-label="전자가 뛰어내릴 층 고르기">' +
+      SW_JUMPS.map(function (j, i) { return '<button type="button" class="ibtn ibtn--sm" data-jump="' + i + '">' + j.from + "층 → " + j.to + "층</button>"; }).join("") +
+      '<button type="button" class="ibtn ibtn--sm" data-jump="reset">↻ 지우기</button></div>' +
+      '<p class="sw-label">수소가 내는 빛의 무늬 · 찾은 줄 <b data-found>0</b> / 4</p>' +
+      '<div class="sw-spec sw-spec--dark sw-spec--lab" aria-hidden="true">' + lines + "</div>" +
+      '<div class="sw-spec-scale" aria-hidden="true"><span>← 보라 (에너지 큼)</span><span>빨강 (에너지 작음) →</span></div>' +
+      '<p class="sw-uv" hidden>👻 보이지 않는 빛(자외선)도 찾았어요! 눈에는 안 보이지만 특별한 기계로는 잴 수 있어요.</p>' +
+      '<p class="sw-msg" aria-live="polite">위의 버튼을 눌러 보세요. 지금 전자는 2층에 있어요.</p></div>';
+    box.appendChild(wrap);
+
+    var el = wrap.querySelector(".sw-electron"), drop = wrap.querySelector(".sw-drop"), photon = wrap.querySelector(".sw-photon"),
+      photonT = wrap.querySelector(".sw-photon-t"), msg = wrap.querySelector(".sw-msg"), uv = wrap.querySelector(".sw-uv"),
+      foundEl = wrap.querySelector("[data-found]"), timers = [], found = {};
+    function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+    function place(y, animate) {
+      el.classList.toggle("is-moving", !!animate);
+      el.setAttribute("transform", "translate(120 " + y + ")");
+      el.style.transform = "translate(120px," + y + "px)";
+    }
+    function levels(a, b) {
+      wrap.querySelectorAll(".sw-level").forEach(function (l) {
+        var n = +l.getAttribute("data-level");
+        l.classList.toggle("is-on", n === a || n === b);
+      });
+    }
+    function emit(j) {
+      var y = SW_LEVEL_Y[j.to] - 12;
+      photon.setAttribute("d", wavePath(134, y, 150, 6, 16));
+      photon.setAttribute("stroke", j.color);
+      photon.setAttribute("stroke-dasharray", j.nm < 380 ? "4 4" : "none");
+      photonT.setAttribute("y", y - 10);
+      photonT.textContent = j.nm < 380 ? "안 보이는 빛!" : j.name + "!";
+      photon.classList.remove("is-fly"); photonT.classList.remove("is-fly");
+      void photon.getBoundingClientRect();
+      photon.classList.add("is-fly"); photonT.classList.add("is-fly");
+      if (j.nm < 380) uv.hidden = false;
+      else {
+        found[j.nm] = true;
+        var line = wrap.querySelector('.sw-spec--lab i[data-nm="' + j.nm + '"]');
+        wrap.querySelectorAll(".sw-spec--lab i").forEach(function (x) { x.classList.remove("is-new"); });
+        line.classList.add("is-on", "is-new");
+      }
+      var cnt = Object.keys(found).length;
+      foundEl.textContent = cnt;
+      msg.innerHTML = "<b>" + j.from + "층 → " + j.to + "층:</b> " + esc(j.say) + " <small>(빛의 길이 " + j.nm + " nm)</small>" +
+        (cnt === 4 && j.nm > 380 ? "<br>🎉 4줄을 다 찾았어요! 진짜 수소 빛도 이 4줄로 보여요. 전자가 정해진 층(계단)에만 있을 수 있다는 증거예요." : "");
+    }
+    function jump(i) {
+      clearTimers();
+      var j = SW_JUMPS[i];
+      levels(j.from, j.to);
+      drop.setAttribute("y1", SW_LEVEL_Y[j.from]); drop.setAttribute("y2", SW_LEVEL_Y[j.to]);
+      drop.classList.add("is-on");
+      if (!swMotion()) { place(SW_LEVEL_Y[j.to], false); emit(j); return; }
+      photon.classList.remove("is-fly"); photonT.classList.remove("is-fly");
+      msg.textContent = j.from + "층으로 올라갔다가 " + j.to + "층으로 뛰어내려요…";
+      place(SW_LEVEL_Y[j.from], false);
+      timers.push(setTimeout(function () { place(SW_LEVEL_Y[j.to], true); }, 420));
+      timers.push(setTimeout(function () { emit(j); }, 420 + 620));
+    }
+    wrap.querySelector(".sw-btns").addEventListener("click", function (ev) {
+      var b = ev.target.closest("[data-jump]");
+      if (!b) return;
+      if (b.dataset.jump === "reset") {
+        clearTimers(); found = {}; foundEl.textContent = "0"; uv.hidden = true;
+        wrap.querySelectorAll(".sw-spec--lab i").forEach(function (x) { x.classList.remove("is-on", "is-new"); });
+        photon.classList.remove("is-fly"); photonT.classList.remove("is-fly"); drop.classList.remove("is-on"); levels(0, 0);
+        place(SW_LEVEL_Y[2], false);
+        msg.textContent = "처음으로 돌아왔어요. 지금 전자는 2층에 있어요.";
+        return;
+      }
+      jump(+b.dataset.jump);
+    });
+  }
+
+  function initHall() {
+    var svg = document.getElementById("sw-hall-svg");
+    if (!svg) return;
+    var cx = 190, cy = 150, rows = [[2, 34, "#b5532f"], [8, 62, "#2c6288"], [18, 94, "#2f7d5b"], [32, 128, "#6b3fa0"]], s = "";
+    rows.forEach(function (row, i) {
+      var n = row[0], r = row[1];
+      s += '<path d="M' + (cx - r) + " " + cy + " A" + r + " " + r + " 0 0 1 " + (cx + r) + " " + cy + '" fill="none" stroke="#ddd5c4" stroke-width="1.5"/>';
+      for (var k = 0; k < n; k++) {
+        var a = Math.PI + (k + 0.5) / n * Math.PI;
+        s += '<circle cx="' + (cx + r * Math.cos(a)).toFixed(1) + '" cy="' + (cy + r * Math.sin(a)).toFixed(1) + '" r="' + (n > 18 ? 3.8 : 4.6) + '" fill="' + row[2] + '"/>';
+      }
+      s += '<text x="' + (cx - r) + '" y="' + (cy + 18) + '" text-anchor="middle" font-size="12" fill="' + row[2] + '" font-weight="700">' + (i + 1) + "층</text>" +
+        '<text x="' + (cx + r) + '" y="' + (cy + 18) + '" text-anchor="middle" font-size="13" fill="' + row[2] + '" font-weight="800">' + n + "</text>";
+    });
+    s += '<path d="M' + (cx - 13) + " " + cy + " A13 13 0 0 1 " + (cx + 13) + " " + cy + ' Z" fill="#1d2330"/>' +
+      '<text x="' + cx + '" y="' + (cy + 36) + '" text-anchor="middle" font-size="12" fill="#1d2330" font-weight="700">▲ 무대(핵)</text>' +
+      '<text x="' + cx + '" y="' + (cy + 54) + '" text-anchor="middle" font-size="11" fill="#545b6a">오른쪽 숫자 = 그 줄의 자리 수</text>';
+    svg.innerHTML = s;
+  }
+
+  function initFillLab() {
+    var box = document.getElementById("sw-fill");
+    if (!box) return;
+    var MAXZ = 20, CAPS = [2, 8, 18, 32], R = [26, 48, 70, 92], z = 1, timer = 0;
+    var wrap = document.createElement("div");
+    wrap.className = "sw-fill";
+    wrap.innerHTML =
+      '<div class="sw-fill__atom"><svg class="sw-atom" viewBox="0 0 200 200" role="img"></svg><p class="sw-fill__name"></p></div>' +
+      '<div class="sw-fill__side">' +
+      '<div class="sw-btns" role="group" aria-label="전자 넣고 빼기">' +
+      '<button type="button" class="ibtn ibtn--sm ibtn--primary" data-fill="plus">＋ 전자 넣기</button>' +
+      '<button type="button" class="ibtn ibtn--sm" data-fill="minus">－ 빼기</button>' +
+      '<button type="button" class="ibtn ibtn--sm" data-fill="auto">▶ 자동으로</button>' +
+      '<button type="button" class="ibtn ibtn--sm" data-fill="reset">↻ 처음부터</button></div>' +
+      '<ul class="sw-rows"></ul>' +
+      '<p class="sw-msg" aria-live="polite"></p>' +
+      '<p class="sw-fill__more"><button type="button" class="linkbtn linkbtn--sm" data-fill="open"></button></p></div>';
+    box.appendChild(wrap);
+    var atom = wrap.querySelector(".sw-atom"), nameEl = wrap.querySelector(".sw-fill__name"), rowsEl = wrap.querySelector(".sw-rows"),
+      msg = wrap.querySelector(".sw-msg"), plus = wrap.querySelector('[data-fill="plus"]'), minus = wrap.querySelector('[data-fill="minus"]'),
+      auto = wrap.querySelector('[data-fill="auto"]'), openBtn = wrap.querySelector('[data-fill="open"]');
+
+    function message(el, sh, added, newShell) {
+      var name = el.n;
+      if (!added) return "전자 하나와 양성자 하나를 뺐어요. 이제 " + name + " 원자예요. 가장 바깥 전자는 " + sh.length + "층에 있어요.";
+      switch (el.z) {
+        case 1: return "수소: 1층에 전자 1개가 들어왔어요. 1층에는 자리가 2개뿐이에요.";
+        case 2: return "헬륨: 1층이 꽉 찼어요! (2/2) 다음 전자는 2층으로 가야 해요.";
+        case 3: return "리튬: 1층에 자리가 없어서 2층에 새 껍질이 생겼어요. 이제 껍질이 2개예요.";
+        case 10: return "네온: 2층도 꽉 찼어요! (8/8) 다음 전자는 3층으로 가야 해요.";
+        case 11: return name + ": 3층에 새 껍질이 생겼어요. 이제 껍질이 3개예요.";
+        case 18: return "아르곤: 3층에 8개가 들어갔어요. 3층은 원래 18자리예요. 다음 전자는 어디로 갈까요?";
+        case 19: return "어? 3층에 아직 10자리가 남았는데, 19번째 전자는 4층으로 갔어요! 3층 안쪽 방(3d)이 4층 첫 방(4s)보다 살짝 높은 곳에 있어서예요. 아래 ‘비유의 한계’를 보세요.";
+        case 20: return name + ": 4층에 2개가 들어갔어요. 3층에 남은 자리는 다음 원소인 스칸듐(21번)부터 채워요.";
+      }
+      return name + ": " + (newShell + 1) + "층에 전자가 하나 더 들어왔어요. (" + sh[newShell] + " / " + CAPS[newShell] + ")";
+    }
+    function render(prevZ) {
+      var el = EL[z - 1], sh = el.ec.shells, added = prevZ === z - 1, newShell = -1, i, k;
+      if (added) {
+        var prev = prevZ ? EL[prevZ - 1].ec.shells : [];
+        for (i = 0; i < sh.length; i++) if ((sh[i] || 0) > (prev[i] || 0)) newShell = i;
+      }
+      var s = "";
+      for (i = 0; i < sh.length; i++) s += '<circle class="sw-ring' + (i === newShell ? " is-active" : "") + '" cx="100" cy="100" r="' + R[i] + '"/>';
+      s += '<circle cx="100" cy="100" r="15" fill="#1d2330"/><text x="100" y="104.5" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">' + esc(el.s) + "</text>";
+      for (i = 0; i < sh.length; i++) {
+        for (k = 0; k < sh[i]; k++) {
+          var a = (k / sh[i]) * Math.PI * 2 - Math.PI / 2, isNew = i === newShell && k === sh[i] - 1;
+          s += '<circle class="sw-e' + (isNew ? " is-new" : "") + '" cx="' + (100 + R[i] * Math.cos(a)).toFixed(1) + '" cy="' + (100 + R[i] * Math.sin(a)).toFixed(1) + '" r="' + (isNew ? 6 : 4.4) + '"/>';
+        }
+      }
+      atom.innerHTML = s;
+      atom.setAttribute("aria-label", el.n + " 원자 그림: " + sh.map(function (c, j) { return (j + 1) + "층 " + c + "개"; }).join(", "));
+      nameEl.innerHTML = "<b>" + el.z + "번 " + esc(el.n) + " (" + esc(el.s) + ")</b><br>전자 " + el.z + "개 · 껍질 " + sh.length + "개 · 가로 " + el.pos.p + "번째 줄";
+      rowsEl.innerHTML = CAPS.map(function (cap, j) {
+        var c = sh[j] || 0, full = c === cap, seats = "";
+        if (cap <= 18) for (k = 0; k < cap; k++) seats += '<span class="sw-seat' + (k < c ? " is-on" : "") + (j === newShell && k === c - 1 ? " is-new" : "") + '"></span>';
+        else for (k = 0; k < c; k++) seats += '<span class="sw-seat is-on' + (j === newShell && k === c - 1 ? " is-new" : "") + '"></span>';
+        if (cap > 18) seats += '<span class="sw-seat-more">자리 32개</span>';
+        return '<li class="' + (c ? "" : "is-empty") + (j === newShell ? " is-active" : "") + '"><b>' + (j + 1) + "층 " + SHELLS[j] + '</b><span class="sw-seats" aria-hidden="true">' + seats + "</span>" +
+          '<span class="sw-count">' + (c ? c + " / " + cap + (full ? " 꽉 참!" : "") : "비어 있어요") + "</span></li>";
+      }).join("");
+      msg.textContent = message(el, sh, added, newShell);
+      plus.disabled = z >= MAXZ; minus.disabled = z <= 1;
+      openBtn.textContent = el.n + " 자세히 보기 →";
+    }
+    function stopAuto() { clearTimeout(timer); timer = 0; auto.textContent = "▶ 자동으로"; }
+    function step() {
+      if (z >= MAXZ) { stopAuto(); return; }
+      z++; render(z - 1);
+      if (timer) timer = setTimeout(step, 1100);
+    }
+    wrap.querySelector(".sw-btns").addEventListener("click", function (ev) {
+      var b = ev.target.closest("[data-fill]");
+      if (!b) return;
+      var act = b.dataset.fill;
+      if (act === "auto") {
+        if (timer) { stopAuto(); return; }
+        if (z >= MAXZ) { z = 1; render(0); }
+        auto.textContent = "⏸ 멈추기";
+        timer = setTimeout(step, 700);
+        return;
+      }
+      stopAuto();
+      if (act === "plus" && z < MAXZ) { z++; render(z - 1); }
+      else if (act === "minus" && z > 1) { z--; render(z + 1); }
+      else if (act === "reset") { z = 1; render(0); }
+    });
+    openBtn.addEventListener("click", function () { stopAuto(); openDetail(z); returnOutside = openBtn; });
+    render(0);
+  }
+
+  function initShellsWhy() {
+    initJumpLab();
+    initHall();
+    initFillLab();
+    document.querySelectorAll("[data-open-z]").forEach(function (b) {
+      b.addEventListener("click", function () { openDetail(+b.dataset.openZ); returnOutside = b; });
+    });
   }
 
   function safeInit() {
