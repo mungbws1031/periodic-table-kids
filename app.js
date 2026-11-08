@@ -1116,6 +1116,7 @@
     setMode("props", false);
     initGuide();
     try { initShellsWhy(); } catch (err) { if (window.console) console.error(err); }
+    try { initDeep(); } catch (err) { if (window.console) console.error(err); }
   }
   function focusAct(act) {
     var b = dialogBody.querySelector('[data-act="' + act + '"]');
@@ -1417,6 +1418,422 @@
     document.querySelectorAll("[data-open-z]").forEach(function (b) {
       b.addEventListener("click", function () { openDetail(+b.dataset.openZ); returnOutside = b; });
     });
+  }
+
+  /* ---------- 읽는 법 4~7번: 원자 속 더 깊이 ---------- */
+  var LV_NAMES = { 1: "초등학생", 2: "중학생", 3: "고등학생", 4: "성인" };
+  function initLevels() {
+    var deep = document.getElementById("deep"), bar = document.getElementById("lvbar"), now = document.getElementById("lvbar-now");
+    if (!deep || !bar) return;
+    function set(n, save) {
+      deep.setAttribute("data-show", String(n));
+      bar.querySelectorAll("[data-lvset]").forEach(function (b) { b.setAttribute("aria-pressed", String(+b.dataset.lvset === n)); });
+      now.textContent = n === 1 ? "초등학생 설명만 보여요." : n === 4 ? "모든 단계의 설명이 다 보여요." : "초등학생부터 " + LV_NAMES[n] + " 설명까지 보여요.";
+      if (save) { try { localStorage.setItem("ptable-level", String(n)); } catch (e) { /* 저장 못 해도 괜찮아요 */ } }
+    }
+    var lv = 4;
+    try { lv = +localStorage.getItem("ptable-level") || 4; } catch (e) { lv = 4; }
+    var m = /[?&]level=([1-4])/.exec(location.search);
+    if (m) lv = +m[1];
+    if (!(lv >= 1 && lv <= 4)) lv = 4;
+    set(lv, false);
+    bar.addEventListener("click", function (ev) {
+      var b = ev.target.closest("[data-lvset]");
+      if (b) set(+b.dataset.lvset, true);
+    });
+  }
+
+  /* 파장(nm) → 대략의 색 */
+  function nmColor(nm) {
+    if (nm < 380) return "#9a91ad";
+    if (nm > 720) return "#6e2a22";
+    var r = 0, g = 0, b = 0;
+    if (nm < 440) { r = (440 - nm) / 60; b = 1; }
+    else if (nm < 490) { g = (nm - 440) / 50; b = 1; }
+    else if (nm < 510) { g = 1; b = (510 - nm) / 20; }
+    else if (nm < 580) { r = (nm - 510) / 70; g = 1; }
+    else if (nm < 645) { r = 1; g = (645 - nm) / 65; }
+    else r = 1;
+    var f = nm < 420 ? 0.45 + 0.55 * (nm - 380) / 40 : nm > 680 ? 0.45 + 0.55 * (720 - nm) / 40 : 1;
+    function h(v) { var x = Math.round(255 * Math.pow(v * f, 0.8)); return (x < 16 ? "0" : "") + x.toString(16); }
+    return "#" + h(r) + h(g) + h(b);
+  }
+  var LT_MIN = 380, LT_MAX = 720;
+  function ltPos(nm) { return ((nm - LT_MIN) / (LT_MAX - LT_MIN) * 100).toFixed(2) + "%"; }
+  function specHTML(lines, extra) {
+    return '<div class="sw-spec sw-spec--dark lt-spec' + (extra ? " " + extra : "") + '">' + lines.map(function (nm) {
+      return '<i style="left:' + ltPos(nm) + ";background:" + nmColor(nm) + ";color:" + nmColor(nm) + '"></i>';
+    }).join("") + "</div>";
+  }
+
+  /* 4번: 벌(전자) 사진 점 찍기 */
+  function initOrbitalDots() {
+    var box = document.getElementById("ob-dots");
+    if (!box) return;
+    var ORB = {
+      s: { name: "1s 방 (공 모양)", scale: 30, sample: function () {
+        var r = -0.5 * (Math.log(1 - Math.random()) + Math.log(1 - Math.random()) + Math.log(1 - Math.random()));
+        var u = 2 * Math.random() - 1, ph = 2 * Math.PI * Math.random(), s = Math.sqrt(1 - u * u);
+        return [r * s * Math.cos(ph), r * u];
+      }, inside: function (p, k) { return p[0] * p[0] + p[1] * p[1] <= k * k; },
+        outline: function (k, sc) { return '<circle cx="0" cy="0" r="' + (k * sc).toFixed(1) + '"/>'; } },
+      p: { name: "2p 방 (아령 모양)", scale: 8.6, sample: function () {
+        var r = 0;
+        for (var i = 0; i < 5; i++) r -= Math.log(1 - Math.random());
+        var w = Math.pow(Math.random(), 1 / 3), u = Math.random() < 0.5 ? -w : w, ph = 2 * Math.PI * Math.random(), s = Math.sqrt(1 - u * u);
+        return [r * s * Math.cos(ph), r * u];
+      }, inside: function (p, k) { var a = p[0] / (0.85 * k), b = (Math.abs(p[1]) - k) / k; return a * a + b * b <= 1; },
+        outline: function (k, sc) { var rx = (0.85 * k * sc).toFixed(1), ry = (k * sc).toFixed(1), c = (k * sc).toFixed(1); return '<ellipse cx="0" cy="-' + c + '" rx="' + rx + '" ry="' + ry + '"/><ellipse cx="0" cy="' + c + '" rx="' + rx + '" ry="' + ry + '"/>'; } }
+    };
+    var MAX = 3000, orb = "s", pts = [], showLine = false;
+    var wrap = document.createElement("div");
+    wrap.className = "ob";
+    wrap.innerHTML =
+      '<div class="ob__fig"><svg class="ob-svg" viewBox="-115 -115 230 230" role="img" aria-label="전자가 발견된 자리를 점으로 찍은 그림">' +
+      '<rect x="-115" y="-115" width="230" height="230" rx="10" fill="#fffdf8"/>' +
+      '<g class="ob-axis"><line x1="-108" x2="108" y1="0" y2="0"/><line x1="0" x2="0" y1="-108" y2="108"/></g>' +
+      '<g class="ob-pts"></g><g class="ob-line" hidden></g><circle r="4.5" fill="#1d2330"/><text class="ob-bee" x="0" y="0" text-anchor="middle" font-size="18" opacity="0">🐝</text></svg>' +
+      '<p class="ob__cap">가운데 검은 점 = 원자핵</p></div>' +
+      '<div class="ob__side">' +
+      '<div class="sw-btns" role="group" aria-label="어떤 방을 볼까요">' +
+      '<button type="button" class="ibtn ibtn--sm" data-orb="s" aria-pressed="true">⚪ 1s 방 (공)</button>' +
+      '<button type="button" class="ibtn ibtn--sm" data-orb="p" aria-pressed="false">∞ 2p 방 (아령)</button></div>' +
+      '<div class="sw-btns" role="group" aria-label="사진 찍기">' +
+      '<button type="button" class="ibtn ibtn--sm ibtn--primary" data-shot="1">📸 1장</button>' +
+      '<button type="button" class="ibtn ibtn--sm" data-shot="10">📸 10장</button>' +
+      '<button type="button" class="ibtn ibtn--sm" data-shot="100">📸 100장</button>' +
+      '<button type="button" class="ibtn ibtn--sm" data-shot="1000">⚡ 1000장</button></div>' +
+      '<div class="sw-btns" role="group" aria-label="그림 도구">' +
+      '<button type="button" class="ibtn ibtn--sm" data-ob="line" aria-pressed="false">✏️ 90% 경계선 그리기</button>' +
+      '<button type="button" class="ibtn ibtn--sm" data-ob="reset">↻ 지우기</button></div>' +
+      '<p class="sw-label">찍은 사진 <b data-count>0</b>장</p>' +
+      '<p class="sw-msg" aria-live="polite">📸 버튼을 눌러 사진을 찍어 보세요.</p></div>';
+    box.appendChild(wrap);
+    var gPts = wrap.querySelector(".ob-pts"), gLine = wrap.querySelector(".ob-line"), bee = wrap.querySelector(".ob-bee"),
+      countEl = wrap.querySelector("[data-count]"), msg = wrap.querySelector(".sw-msg"), lineBtn = wrap.querySelector('[data-ob="line"]');
+
+    function boundaryK() {
+      var o = ORB[orb], lo = 0.05, hi = 30;
+      for (var it = 0; it < 40; it++) {
+        var mid = (lo + hi) / 2, c = 0;
+        for (var i = 0; i < pts.length; i++) if (o.inside(pts[i], mid)) c++;
+        if (c / pts.length >= 0.9) hi = mid; else lo = mid;
+      }
+      return hi;
+    }
+    function drawLine() {
+      gLine.hidden = !showLine;
+      lineBtn.setAttribute("aria-pressed", String(showLine));
+      if (!showLine) { gLine.innerHTML = ""; return ""; }
+      if (pts.length < 30) { gLine.innerHTML = ""; return "점이 30개 이상 모여야 경계선을 그릴 수 있어요. 사진을 더 찍어 보세요."; }
+      var k = boundaryK(), o = ORB[orb], c = 0;
+      for (var i = 0; i < pts.length; i++) if (o.inside(pts[i], k)) c++;
+      gLine.innerHTML = o.outline(k, o.scale);
+      return "✏️ 이 선 안에 지금 찍은 점 " + pts.length + "개 중 " + c + "개(" + Math.round(c / pts.length * 100) + "%)가 들어 있어요. 이 선이 책에 나오는 오비탈 그림이에요.";
+    }
+    function explain() {
+      var n = pts.length;
+      if (!n) return orb === "s" ? "1s 방을 골랐어요. 📸 버튼을 눌러 사진을 찍어 보세요." : "2p 방을 골랐어요. 📸 버튼을 눌러 사진을 찍어 보세요.";
+      if (n === 1) return "사진을 한 장 찍었어요. 한 장만 보면 전자가 어디에 자주 나타나는지 알 수 없어요.";
+      if (n < 60) return "점이 " + n + "개 모였어요. 아직 모양이 잘 안 보여요. 더 찍어 보세요!";
+      if (orb === "s") return n < 400 ? "가운데(핵) 가까이 점이 빽빽해지고 있어요. 둥근 모양이 보이기 시작해요." :
+        "핵 가까이는 빽빽하고 바깥으로 갈수록 드문드문해요. 둥글게 퍼진 이 구름이 1s 오비탈이에요. 끝이 딱 끊기지 않고 점점 옅어지죠?";
+      return n < 400 ? "위아래로 두 덩어리가 생기고 있어요." :
+        "위아래 두 덩어리, 아령 모양이 보여요! 가운데 가로선 위에는 점이 거의 없어요. 이 방(2p)에서는 그 판 위에서 전자가 발견될 가능성이 0이에요.";
+    }
+    function update(lastPt) {
+      countEl.textContent = pts.length;
+      var t = explain(), lt = drawLine();
+      msg.textContent = lt ? t + " " + lt : t;
+      if (lastPt && swMotion()) {
+        var sc = ORB[orb].scale;
+        bee.setAttribute("x", (lastPt[0] * sc).toFixed(1));
+        bee.setAttribute("y", (-lastPt[1] * sc - 6).toFixed(1));
+        bee.classList.remove("is-buzz"); void bee.getBoundingClientRect(); bee.classList.add("is-buzz");
+      }
+    }
+    function shoot(n) {
+      var o = ORB[orb], sc = o.scale, html = "", last = null;
+      n = Math.min(n, MAX - pts.length);
+      if (n <= 0) { msg.textContent = "점이 " + MAX + "개로 가득 찼어요. ↻ 지우기를 누르고 다시 해 보세요."; return; }
+      for (var i = 0; i < n; i++) {
+        var p = o.sample();
+        pts.push(p); last = p;
+        html += '<circle cx="' + (p[0] * sc).toFixed(1) + '" cy="' + (-p[1] * sc).toFixed(1) + '" r="1.6"/>';
+      }
+      gPts.insertAdjacentHTML("beforeend", html);
+      update(n === 1 ? last : null);
+    }
+    function reset() { pts = []; gPts.innerHTML = ""; bee.classList.remove("is-buzz"); update(null); }
+    wrap.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button");
+      if (!b || !wrap.contains(b)) return;
+      if (b.dataset.shot) shoot(+b.dataset.shot);
+      else if (b.dataset.orb) {
+        orb = b.dataset.orb;
+        wrap.querySelectorAll("[data-orb]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+        reset();
+      } else if (b.dataset.ob === "line") { showLine = !showLine; update(null); }
+      else if (b.dataset.ob === "reset") reset();
+    });
+  }
+
+  /* 5번: 빛의 지문 맞히기 */
+  var LT_SPECTRA = [
+    { k: "H", z: 1, name: "수소", lines: [410, 434, 486, 656], hint: "별과 우주에 가장 많은 원소예요. 3번 실험에서 찾은 4줄을 떠올려 보세요." },
+    { k: "He", z: 2, name: "헬륨", lines: [447, 471, 492, 502, 588, 668, 707], hint: "1868년 태양 빛에서 먼저 발견됐어요. 노란 줄(588 nm)이 단서예요." },
+    { k: "Na", z: 11, name: "소듐(나트륨)", lines: [589, 589.6], hint: "노란 가로등 빛이에요. 노란 줄 하나만 아주 밝아요." },
+    { k: "Ne", z: 10, name: "네온", lines: [540, 585, 588, 594, 597, 603, 607, 614, 616, 622, 627, 633, 638, 640, 651, 660, 693, 703], hint: "주황빛 간판 불빛이에요. 노랑~빨강 쪽에 줄이 아주 많아요." },
+    { k: "Hg", z: 80, name: "수은", lines: [405, 436, 546, 577, 579], hint: "옛날 형광등 속에 아주 조금 들어 있었어요. 초록 줄(546 nm)이 단서예요." }
+  ];
+  function initLightQuiz() {
+    var box = document.getElementById("lt-quiz");
+    if (!box) return;
+    var order = [], idx = 0, score = 0, tried = 0, answered = false, wrongs = 0;
+    var wrap = document.createElement("div");
+    wrap.className = "ltq";
+    wrap.innerHTML =
+      '<div class="ltq__mystery"><p class="sw-label">🔭 수수께끼 빛 · <span data-q></span></p><div data-mys></div>' +
+      '<div class="sw-spec-scale" aria-hidden="true"><span>380 nm 보라</span><span>빨강 720 nm</span></div></div>' +
+      '<p class="sw-label">📖 지문 사전 · 맞는 원소를 눌러 보세요</p>' +
+      '<div class="ltq__dict" role="group" aria-label="원소 고르기">' + LT_SPECTRA.map(function (sp, i) {
+        return '<button type="button" class="ltq__opt" data-pick="' + i + '"><span class="ltq__name">' + esc(sp.name) + " <small>" + sp.k + "</small></span>" + specHTML(sp.lines, "lt-spec--mini") + "</button>";
+      }).join("") + "</div>" +
+      '<div class="sw-btns ltq__ctl"><button type="button" class="ibtn ibtn--sm" data-lt="hint">💡 힌트</button>' +
+      '<button type="button" class="ibtn ibtn--sm ibtn--primary" data-lt="next" disabled>다음 문제 →</button>' +
+      '<span class="ltq__score">맞힌 문제 <b data-score>0</b> / <b data-tried>0</b></span></div>' +
+      '<p class="sw-msg" aria-live="polite"></p>';
+    box.appendChild(wrap);
+    var mys = wrap.querySelector("[data-mys]"), qEl = wrap.querySelector("[data-q]"), msg = wrap.querySelector(".sw-msg"),
+      nextBtn = wrap.querySelector('[data-lt="next"]'), scoreEl = wrap.querySelector("[data-score]"), triedEl = wrap.querySelector("[data-tried]");
+    function shuffle() {
+      order = LT_SPECTRA.map(function (_, i) { return i; });
+      for (var i = order.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = order[i]; order[i] = order[j]; order[j] = t; }
+    }
+    function show() {
+      var sp = LT_SPECTRA[order[idx]];
+      answered = false; wrongs = 0;
+      mys.innerHTML = specHTML(sp.lines, "lt-spec--big");
+      mys.firstChild.setAttribute("role", "img");
+      mys.firstChild.setAttribute("aria-label", "수수께끼 빛의 줄무늬: " + sp.lines.length + "줄");
+      qEl.textContent = "문제 " + (idx + 1) + " / " + order.length;
+      wrap.querySelectorAll(".ltq__opt").forEach(function (o) { o.classList.remove("is-right", "is-wrong"); o.disabled = false; });
+      nextBtn.disabled = true;
+      nextBtn.textContent = idx === order.length - 1 ? "결과 보기 →" : "다음 문제 →";
+      msg.textContent = "수수께끼 빛과 줄의 위치가 똑같은 원소를 지문 사전에서 찾아보세요.";
+    }
+    function start() { shuffle(); idx = 0; score = 0; tried = 0; scoreEl.textContent = "0"; triedEl.textContent = "0"; show(); }
+    wrap.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button");
+      if (!b || !wrap.contains(b)) return;
+      var ans = order[idx], sp = LT_SPECTRA[ans];
+      if (b.dataset.pick) {
+        if (answered) return;
+        var pick = +b.dataset.pick;
+        if (pick === ans) {
+          answered = true; b.classList.add("is-right");
+          if (!wrongs) score++;
+          tried++; scoreEl.textContent = score; triedEl.textContent = tried;
+          wrap.querySelectorAll(".ltq__opt").forEach(function (o) { o.disabled = true; });
+          nextBtn.disabled = false;
+          msg.innerHTML = "⭕ 맞아요! <b>" + esc(sp.name) + "</b>의 빛이에요. 줄이 " + sp.lines.length + "개" + (sp.k === "Na" ? "(사실은 아주 가까운 2줄이라 1줄처럼 보여요)" : "") + " 있고, 위치가 사전과 똑같아요. 이렇게 빛만 보고 원소를 알아내는 것을 <b>분광 분석</b>이라고 해요.";
+        } else {
+          wrongs++; b.classList.add("is-wrong"); b.disabled = true;
+          msg.textContent = "❌ " + LT_SPECTRA[pick].name + "는 아니에요. 줄의 개수와 위치를 다시 비교해 보세요. 어려우면 💡 힌트를 눌러요.";
+        }
+      } else if (b.dataset.lt === "hint") {
+        if (!answered) msg.textContent = "💡 힌트: " + sp.hint;
+      } else if (b.dataset.lt === "next") {
+        if (idx < order.length - 1) { idx++; show(); }
+        else {
+          mys.innerHTML = ""; nextBtn.disabled = true; qEl.textContent = "다 풀었어요";
+          msg.innerHTML = "🎉 " + order.length + "문제 중 <b>" + score + "문제</b>를 한 번에 맞혔어요! 과학자들도 이렇게 별빛의 줄무늬를 사전과 맞춰 별의 성분을 알아내요. " +
+            '<button type="button" class="linkbtn linkbtn--sm" data-lt="again">↻ 다시 하기</button>';
+        }
+      } else if (b.dataset.lt === "again") start();
+    });
+    start();
+  }
+
+  /* 6번: 한 번에 vs 나눠서 */
+  function hDE(up, low) { return 13.6 * (1 / (low * low) - 1 / (up * up)); }
+  function photonInfo(e) {
+    var nm = 1239.84 / e, sw = SW_JUMPS.filter(function (j) { return Math.abs(j.nm - nm) < 3; })[0];
+    if (nm < 380) return { nm: nm, color: "#8f86a8", name: "자외선", kind: "uv" };
+    if (nm > 720) return { nm: nm, color: "#8a3b2c", name: "적외선", kind: "ir" };
+    return { nm: nm, color: sw ? sw.color : nmColor(nm), name: sw ? sw.name.replace(" 빛", "") : "보이는 빛", kind: "vis" };
+  }
+  function initEnergyLab() {
+    var box = document.getElementById("es-lab");
+    if (!box) return;
+    var from = 3, to = 1, done = { once: null, split: null }, timers = [];
+    var svg = '<svg class="sw-levels" viewBox="0 0 300 206" role="img" aria-label="수소 원자의 층 계단 그림(간격은 보기 쉽게 조절)">';
+    for (var n = 1; n <= 6; n++) {
+      svg += '<line class="sw-level" data-level="' + n + '" x1="48" x2="292" y1="' + SW_LEVEL_Y[n] + '" y2="' + SW_LEVEL_Y[n] + '"/>' +
+        '<text class="sw-level-t" x="42" y="' + (SW_LEVEL_Y[n] + 4) + '" text-anchor="end">' + n + "층</text>";
+    }
+    svg += '<g class="es-photons"></g><g class="sw-electron" transform="translate(110 ' + SW_LEVEL_Y[3] + ')"><circle r="8"/><text y="4" text-anchor="middle">−</text></g></svg>';
+    var wrap = document.createElement("div");
+    wrap.className = "sw-jump es";
+    wrap.innerHTML = '<div class="sw-jump__fig">' + svg + '<p class="ob__cap">층 간격은 보기 쉽게 조절했어요. 진짜 비율은 아래 그림을 보세요.</p></div>' +
+      '<div class="sw-jump__side">' +
+      '<p class="sw-label">출발 층</p><div class="sw-btns" role="group" aria-label="출발 층 고르기" data-grp="from">' +
+      [2, 3, 4, 5, 6].map(function (k) { return '<button type="button" class="ibtn ibtn--sm" data-from="' + k + '" aria-pressed="' + (k === from) + '">' + k + "층</button>"; }).join("") + "</div>" +
+      '<p class="sw-label">도착 층</p><div class="sw-btns" role="group" aria-label="도착 층 고르기" data-grp="to"></div>' +
+      '<div class="sw-btns es-go"><button type="button" class="ibtn ibtn--sm ibtn--primary" data-go="once">⚡ 한 번에</button>' +
+      '<button type="button" class="ibtn ibtn--sm ibtn--primary" data-go="split">🪜 한 층씩 나눠서</button>' +
+      '<button type="button" class="ibtn ibtn--sm" data-go="reset">↻ 지우기</button></div>' +
+      '<div class="es-rows">' +
+      '<div class="es-row" data-row="once"><span class="es-row__t">⚡ 한 번에</span><div class="es-bar"></div><b class="es-sum">–</b></div>' +
+      '<div class="es-row" data-row="split"><span class="es-row__t">🪜 나눠서</span><div class="es-bar"></div><b class="es-sum">–</b></div>' +
+      '<div class="es-scale" aria-hidden="true"><span>0</span><span>막대 끝 = 13.6 (전자가 원자를 떠나는 에너지)</span></div></div>' +
+      '<p class="sw-msg" aria-live="polite"></p></div>';
+    box.appendChild(wrap);
+    var toGrp = wrap.querySelector('[data-grp="to"]'), msg = wrap.querySelector(".sw-msg"), el = wrap.querySelector(".sw-electron"),
+      gPh = wrap.querySelector(".es-photons");
+    function place(y, animate) {
+      el.classList.toggle("is-moving", !!animate);
+      el.setAttribute("transform", "translate(110 " + y + ")");
+      el.style.transform = "translate(110px," + y + "px)";
+    }
+    function levels(a, b) {
+      wrap.querySelectorAll(".sw-level").forEach(function (l) { var k = +l.getAttribute("data-level"); l.classList.toggle("is-on", k <= a && k >= b); });
+    }
+    function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+    function drawTo() {
+      var h = "";
+      for (var k = 1; k < from; k++) h += '<button type="button" class="ibtn ibtn--sm" data-to="' + k + '" aria-pressed="' + (k === to) + '">' + k + "층</button>";
+      toGrp.innerHTML = h;
+    }
+    function clearRows() {
+      done = { once: null, split: null };
+      wrap.querySelectorAll(".es-row").forEach(function (r) { r.querySelector(".es-bar").innerHTML = ""; r.querySelector(".es-sum").textContent = "–"; r.classList.remove("is-done"); });
+      gPh.innerHTML = "";
+    }
+    function fmt(x) { return x.toFixed(2); }
+    function segHTML(e) {
+      var p = photonInfo(e);
+      return '<span class="es-seg es-seg--' + p.kind + '" style="width:' + (e / 13.6 * 100).toFixed(2) + "%;background:" + p.color + '" title="' + p.name + " " + fmt(e) + '"><em>' + (e >= 1.2 ? fmt(e) : "") + "</em></span>";
+    }
+    function listText(es) {
+      return es.map(function (e) { var p = photonInfo(e); return p.name + " " + fmt(e); }).join(" + ");
+    }
+    function finishRow(mode, es) {
+      var row = wrap.querySelector('[data-row="' + mode + '"]'), sum = es.reduce(function (a, b) { return a + b; }, 0);
+      row.querySelector(".es-bar").innerHTML = es.map(segHTML).join("");
+      row.querySelector(".es-sum").textContent = fmt(sum);
+      row.classList.add("is-done");
+      done[mode] = sum;
+      var t = "<b>" + (mode === "once" ? "⚡ 한 번에" : "🪜 나눠서") + " " + from + "층 → " + to + "층:</b> 빛 " + es.length + "개 (" + esc(listText(es)) + ") = 합계 <b>" + fmt(sum) + "</b>";
+      if (done.once !== null && done.split !== null) {
+        t += "<br>✅ <b>두 합계가 똑같아요!</b> 몇 번에 나눠 뛰든 처음 층과 마지막 층이 같으면 내놓는 에너지 합계는 같아요.";
+        if (from - to > 1) t += " 대신 나눠 뛰면 <b>작은 빛 여러 개</b>, 한 번에 뛰면 <b>큰 빛 하나</b>가 나와요.";
+        if (to === 1) t += " 막대를 보면 2층 → 1층 칸이 가장 길어요. 가장 안쪽으로 떨어질 때 에너지가 가장 커요.";
+      } else t += "<br>이번엔 " + (mode === "once" ? "🪜 한 층씩 나눠서" : "⚡ 한 번에") + "도 눌러서 비교해 보세요.";
+      msg.innerHTML = t;
+    }
+    function emitWave(lv, color) {
+      var y = SW_LEVEL_Y[lv] - 10;
+      gPh.insertAdjacentHTML("beforeend", '<path class="sw-photon is-fly" d="' + wavePath(124, y, 160, 5, 14) + '" fill="none" stroke-width="3" stroke-linecap="round" stroke="' + color + '"/>');
+    }
+    function run(mode) {
+      clearTimers(); gPh.innerHTML = "";
+      var steps = mode === "once" ? [[from, to]] : [];
+      if (mode === "split") for (var k = from; k > to; k--) steps.push([k, k - 1]);
+      var es = steps.map(function (s) { return hDE(s[0], s[1]); });
+      levels(from, to);
+      if (!swMotion()) { place(SW_LEVEL_Y[to], false); steps.forEach(function (s, i) { emitWave(s[1], photonInfo(es[i]).color); }); finishRow(mode, es); return; }
+      msg.textContent = "전자를 " + from + "층으로 올렸어요. 이제 " + (mode === "once" ? "한 번에" : "한 층씩") + " 뛰어내려요…";
+      place(SW_LEVEL_Y[from], false);
+      var t = 380;
+      steps.forEach(function (s, i) {
+        timers.push(setTimeout(function () { place(SW_LEVEL_Y[s[1]], true); }, t));
+        timers.push(setTimeout(function () { emitWave(s[1], photonInfo(es[i]).color); }, t + 600));
+        t += 900;
+      });
+      timers.push(setTimeout(function () { finishRow(mode, es); }, t));
+    }
+    wrap.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button");
+      if (!b || !wrap.contains(b)) return;
+      if (b.dataset.from) {
+        clearTimers(); from = +b.dataset.from; if (to >= from) to = from - 1;
+        wrap.querySelectorAll("[data-from]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+        drawTo(); clearRows(); levels(0, 0); place(SW_LEVEL_Y[from], false);
+        msg.textContent = from + "층에서 " + to + "층까지 내려가 볼게요. ⚡와 🪜를 둘 다 눌러 보세요.";
+      } else if (b.dataset.to) {
+        clearTimers(); to = +b.dataset.to;
+        toGrp.querySelectorAll("[data-to]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+        clearRows(); levels(0, 0); place(SW_LEVEL_Y[from], false);
+        msg.textContent = from + "층에서 " + to + "층까지 내려가 볼게요. ⚡와 🪜를 둘 다 눌러 보세요.";
+      } else if (b.dataset.go === "reset") {
+        clearTimers(); clearRows(); levels(0, 0); place(SW_LEVEL_Y[from], false);
+        msg.textContent = "막대를 지웠어요. 다시 눌러 보세요.";
+      } else if (b.dataset.go) run(b.dataset.go);
+    });
+    drawTo();
+    msg.textContent = "3층에서 1층까지 내려가 볼게요. ⚡ 한 번에와 🪜 한 층씩 나눠서를 둘 다 눌러 보세요.";
+  }
+
+  /* 7번: 불꽃놀이 만들기 */
+  var FW = [
+    { s: "Li", z: 3, n: "리튬", color: "#e8174a", c: "진한 빨강", say: "리튬 원자의 바깥 전자가 671 nm 빨간빛을 내요. 빨간 불꽃 신호와 리튬 확인 실험에 써요." },
+    { s: "Na", z: 11, n: "소듐(나트륨)", color: "#ffc61a", c: "노랑", say: "소듐 원자의 바깥 전자가 589 nm 노란빛을 내요. 노란 가로등, 소금을 불에 뿌렸을 때와 같은 색이에요." },
+    { s: "K", z: 19, n: "포타슘(칼륨)", color: "#b993f2", c: "연보라", say: "포타슘은 빨간 쪽(766 nm)과 보라 쪽(404 nm) 빛이 섞여 연보라로 보여요. 소듐이 조금만 섞여도 노란빛에 가려져요." },
+    { s: "Ca", z: 20, n: "칼슘", color: "#ff7426", c: "주황", say: "칼슘이 든 물질은 주황빛 불꽃을 내요. 불꽃놀이에서 주황색을 낼 때 써요." },
+    { s: "Sr", z: 38, n: "스트론튬", color: "#ff2140", c: "빨강", say: "불꽃놀이와 비상 신호탄의 새빨간 색은 스트론튬으로 내요." },
+    { s: "Ba", z: 56, n: "바륨", color: "#9be15d", c: "연두·초록", say: "불꽃놀이의 초록색은 바륨으로 내요." },
+    { s: "Cu", z: 29, n: "구리", color: "#3b8cff", c: "파랑", say: "불꽃놀이의 파란색은 구리로 내요. 파랑은 만들기 가장 어려운 불꽃 색이라 온도를 잘 맞춰야 해요." }
+  ];
+  function initFireworks() {
+    var box = document.getElementById("fw-lab");
+    if (!box) return;
+    var wrap = document.createElement("div"), slot = 0, made = {};
+    wrap.className = "fw";
+    wrap.innerHTML = '<div class="fw-sky" aria-hidden="true"><span class="fw-ground"></span></div>' +
+      '<div class="sw-btns fw-btns" role="group" aria-label="불꽃 원소 고르기">' + FW.map(function (f, i) {
+        return '<button type="button" class="ibtn ibtn--sm fw-btn" data-fw="' + i + '"><span class="fw-sw" style="background:' + f.color + '"></span>' + esc(f.n) + " " + f.s + "</button>";
+      }).join("") + '<button type="button" class="ibtn ibtn--sm" data-fw="all">🎆 한꺼번에</button></div>' +
+      '<p class="sw-label">만든 불꽃 색 <b data-made>0</b> / ' + FW.length + "</p>" +
+      '<p class="sw-msg" aria-live="polite">원소 단추를 눌러 보세요.</p>';
+    box.appendChild(wrap);
+    var sky = wrap.querySelector(".fw-sky"), msg = wrap.querySelector(".sw-msg"), madeEl = wrap.querySelector("[data-made]");
+    function burst(f, x, y) {
+      var b = document.createElement("div"), N = 18, h = "";
+      b.className = "fw-b" + (swMotion() ? "" : " is-still");
+      b.style.left = x + "%"; b.style.top = y + "%"; b.style.color = f.color;
+      for (var i = 0; i < N; i++) h += '<i style="--a:' + (i * 360 / N) + 'deg"></i>';
+      b.innerHTML = h + '<b class="fw-label">' + f.s + "</b>";
+      sky.appendChild(b);
+      var olds = sky.querySelectorAll(".fw-b");
+      if (olds.length > 8) olds[0].remove();
+      setTimeout(function () { if (b.parentNode) b.remove(); }, swMotion() ? 2200 : 3500);
+    }
+    function fire(i) {
+      var f = FW[i], P = [[14, 30], [50, 30], [86, 30], [32, 62], [68, 62], [14, 72], [86, 72]], pos = P[slot % P.length];
+      slot++;
+      burst(f, pos[0], pos[1]);
+      made[i] = true;
+      madeEl.textContent = Object.keys(made).length;
+      msg.innerHTML = "<b>" + esc(f.n) + " → " + f.c + "</b> " + esc(f.say) + (Object.keys(made).length === FW.length ? "<br>🎉 7가지 색을 다 만들었어요! 색이 다른 건 원소마다 전자 계단의 높이가 다르기 때문이에요." : "");
+    }
+    wrap.addEventListener("click", function (ev) {
+      var b = ev.target.closest("[data-fw]");
+      if (!b) return;
+      if (b.dataset.fw === "all") {
+        FW.forEach(function (f, i) { setTimeout(function () { fire(i); }, swMotion() ? i * 260 : 0); });
+        return;
+      }
+      fire(+b.dataset.fw);
+    });
+  }
+
+  function initDeep() {
+    initLevels();
+    initOrbitalDots();
+    initLightQuiz();
+    initEnergyLab();
+    initFireworks();
   }
 
   function safeInit() {
